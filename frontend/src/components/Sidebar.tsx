@@ -14,6 +14,7 @@ import {
     Settings,
     ChevronLeft,
     ChevronRight,
+    Wallet,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -35,6 +36,7 @@ export default function Sidebar() {
         { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { href: '/transactions', label: 'Transactions', icon: Receipt },
         { href: '/budgets', label: 'Budgets', icon: PiggyBank },
+        { href: '/savings', label: 'Savings', icon: Wallet },
         { href: '/recurring', label: 'Recurring', icon: Repeat },
         { href: '/insights', label: 'AI Advisor', icon: Sparkles },
         { href: '/settings', label: 'Settings', icon: Settings },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,7 @@ function SettingsContent() {
         profilePicture: user?.profilePicture || '',
         coverPicture: user?.coverPicture || '',
     });
+    const hasShownConfettiRef = useRef(false);
 
     // Calculate profile completion
     const fields = ['name', 'email', 'bio', 'phoneNumber', 'dateOfBirth', 'profilePicture', 'coverPicture'];
@@ -68,13 +69,19 @@ function SettingsContent() {
     };
 
     useEffect(() => {
-        if (completion === 100) {
+        // Only show confetti once when profile reaches 100% completion
+        if (completion === 100 && !hasShownConfettiRef.current) {
             confetti({
                 particleCount: 100,
                 spread: 70,
                 origin: { y: 0.6 },
                 colors: ['#7c3aed', '#6d28d9', '#a78bfa'] // Purple theme colors
             });
+            hasShownConfettiRef.current = true;
+        }
+        // Reset confetti flag if profile becomes incomplete again
+        if (completion < 100) {
+            hasShownConfettiRef.current = false;
         }
     }, [completion]);
 
@@ -95,21 +102,23 @@ function SettingsContent() {
 
     return (
         <>
-            {/* Profile Completion Card */}
-            <Card className="border-purple-200 dark:border-purple-900 bg-purple-50 dark:bg-purple-900/20">
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-purple-700 dark:text-purple-300 flex justify-between items-center">
-                        Profile Completion
-                        <span className="text-2xl font-bold">{completion}%</span>
-                    </CardTitle>
-                    <CardDescription className="text-purple-600/80 dark:text-purple-400/80">
-                        Complete your profile to get the most out of ExpenseAI.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Progress value={completion} className="h-3 bg-purple-200 dark:bg-purple-900" indicatorClassName="bg-purple-600 dark:bg-purple-400" />
-                </CardContent>
-            </Card>
+            {/* Profile Completion Card - Only show when profile is incomplete */}
+            {completion < 100 && (
+                <Card className="border-purple-200 dark:border-purple-900 bg-purple-50 dark:bg-purple-900/20">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-purple-700 dark:text-purple-300 flex justify-between items-center">
+                            Profile Completion
+                            <span className="text-2xl font-bold">{completion}%</span>
+                        </CardTitle>
+                        <CardDescription className="text-purple-600/80 dark:text-purple-400/80">
+                            Complete your profile to get the most out of ExpenseAI.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Progress value={completion} className="h-3 bg-purple-200 dark:bg-purple-900" indicatorClassName="bg-purple-600 dark:bg-purple-400" />
+                    </CardContent>
+                </Card>
+            )}
 
             <form onSubmit={handleSubmit} className="grid gap-6">
                 <Card>
