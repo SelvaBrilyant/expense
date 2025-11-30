@@ -1,4 +1,4 @@
-import express from 'express';
+import express from "express";
 import {
   registerUser,
   authUser,
@@ -7,8 +7,11 @@ import {
   requestPasswordReset,
   verifyResetOTP,
   resetPassword,
-} from '../controllers/authController';
-import { protect } from '../middlewares/authMiddleware';
+  googleAuth,
+  deleteAccount,
+  reactivateAccount,
+} from "../controllers/authController";
+import { protect } from "../middlewares/authMiddleware";
 
 const router = express.Router();
 
@@ -48,7 +51,7 @@ const router = express.Router();
  *       400:
  *         description: User already exists
  */
-router.post('/', registerUser);
+router.post("/", registerUser);
 
 /**
  * @swagger
@@ -76,7 +79,7 @@ router.post('/', registerUser);
  *       401:
  *         description: Invalid email or password
  */
-router.post('/login', authUser);
+router.post("/login", authUser);
 
 /**
  * @swagger
@@ -93,9 +96,64 @@ router.post('/login', authUser);
  *         description: Not authorized
  */
 router
-  .route('/profile')
+  .route("/profile")
   .get(protect, getUserProfile)
-  .put(protect, updateUserProfile);
+  .get(protect, getUserProfile)
+  .put(protect, updateUserProfile)
+  .delete(protect, deleteAccount);
+
+/**
+ * @swagger
+ * /api/users/google:
+ *   post:
+ *     summary: Authenticate with Google
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - credential
+ *             properties:
+ *               credential:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successful login
+ *       400:
+ *         description: Google authentication failed
+ */
+router.post("/google", googleAuth);
+
+/**
+ * @swagger
+ * /api/users/reactivate:
+ *   post:
+ *     summary: Reactivate a soft-deleted account
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Account reactivated successfully
+ *       400:
+ *         description: Account is already active or invalid credentials
+ */
+router.post("/reactivate", reactivateAccount);
 
 /**
  * @swagger
@@ -121,7 +179,7 @@ router
  *       400:
  *         description: Email is required
  */
-router.post('/forgot-password', requestPasswordReset);
+router.post("/forgot-password", requestPasswordReset);
 
 /**
  * @swagger
@@ -150,7 +208,7 @@ router.post('/forgot-password', requestPasswordReset);
  *       400:
  *         description: Invalid or expired OTP
  */
-router.post('/verify-reset-otp', verifyResetOTP);
+router.post("/verify-reset-otp", verifyResetOTP);
 
 /**
  * @swagger
@@ -187,6 +245,6 @@ router.post('/verify-reset-otp', verifyResetOTP);
  *       400:
  *         description: Invalid input or OTP
  */
-router.post('/reset-password', resetPassword);
+router.post("/reset-password", resetPassword);
 
 export default router;

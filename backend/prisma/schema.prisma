@@ -26,6 +26,13 @@ model User {
   resetPasswordOtp       String?
   resetPasswordOtpExpiry DateTime?
 
+  // Soft Delete
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+
+  // Google SSO
+  googleId String? @unique
+
   transactions Transaction[]
   budgets      Budget[]
   recurring    RecurringTransaction[]

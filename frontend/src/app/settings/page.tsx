@@ -15,9 +15,21 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { ImageUpload } from '@/components/image-upload';
 import api from '@/lib/api';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 function SettingsContent() {
-    const { user, updateProfile, isLoading } = useAuthStore();
+    const { user, updateProfile, deleteAccount, isLoading } = useAuthStore();
+    const router = useRouter();
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [formData, setFormData] = useState({
         name: user?.name || '',
         email: user?.email || '',
@@ -117,6 +129,18 @@ function SettingsContent() {
             toast.success('Profile updated successfully!');
         } catch {
             toast.error('Failed to update profile');
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        setIsDeleting(true);
+        try {
+            await deleteAccount();
+            toast.success("Account deleted successfully");
+            router.push('/login');
+        } catch {
+            toast.error("Failed to delete account");
+            setIsDeleting(false);
         }
     };
 
@@ -364,7 +388,12 @@ function SettingsContent() {
 
                             <div className="pt-8 mt-8 border-t border-gray-100 dark:border-gray-800">
                                 <h4 className="text-sm font-medium text-red-600 mb-2">Danger Zone</h4>
-                                <Button variant="destructive" className="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 dark:bg-red-900/10 dark:hover:bg-red-900/20 dark:border-red-900/50">
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    className="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 dark:bg-red-900/10 dark:hover:bg-red-900/20 dark:border-red-900/50"
+                                    onClick={() => setIsDeleteOpen(true)}
+                                >
                                     Delete Account
                                 </Button>
                             </div>
@@ -372,7 +401,34 @@ function SettingsContent() {
                     </Card>
                 </div>
             </form>
-        </div>
+
+            <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Are you absolutely sure?</DialogTitle>
+                        <DialogDescription>
+                            This action cannot be undone. This will permanently delete your account
+                            and remove your data from our servers.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsDeleteOpen(false)} disabled={isDeleting}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleDeleteAccount} disabled={isDeleting}>
+                            {isDeleting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Deleting...
+                                </>
+                            ) : (
+                                'Delete Account'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div >
     );
 }
 

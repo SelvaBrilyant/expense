@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import AuthGuard from "@/components/AuthGuard";
 import Sidebar from "@/components/Sidebar";
+import { GoogleAuthProvider } from "@/components/providers/GoogleAuthProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,15 +31,17 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthGuard>
-          <div className="flex h-screen overflow-hidden bg-background">
-            <Sidebar />
-            <main className="flex-1 overflow-y-auto">
-              {children}
-            </main>
-          </div>
-        </AuthGuard>
-        <Toaster />
+        <GoogleAuthProvider>
+          <AuthGuard>
+            <div className="flex h-screen overflow-hidden bg-background">
+              <Sidebar />
+              <main className="flex-1 overflow-y-auto">
+                {children}
+              </main>
+            </div>
+          </AuthGuard>
+          <Toaster />
+        </GoogleAuthProvider>
       </body>
     </html>
   );

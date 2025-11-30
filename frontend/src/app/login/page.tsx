@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { GoogleLogin } from '@react-oauth/google';
 
 const formSchema = z.object({
     email: z.string().email({
@@ -31,7 +32,8 @@ const formSchema = z.object({
 
 export default function LoginPage() {
     const router = useRouter();
-    const { login, isLoading, error } = useAuthStore();
+    const { login, googleLogin, reactivateAccount, isLoading, error } = useAuthStore();
+    const [isReactivationNeeded, setIsReactivationNeeded] = useState(false);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -42,15 +44,49 @@ export default function LoginPage() {
     });
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
+        if (isReactivationNeeded) {
+            await reactivateAccount(values);
+            const state = useAuthStore.getState();
+            if (state.user) {
+                toast.success('Account reactivated successfully');
+                router.push('/dashboard');
+            } else if (state.error) {
+                toast.error(state.error);
+            }
+            return;
+        }
+
         await login(values);
         const state = useAuthStore.getState();
         if (state.user) {
             toast.success('Login successful');
             router.push('/dashboard');
         } else if (state.error) {
-            toast.error(state.error);
+            if (state.error === "Account deleted. Please reactivate your account.") {
+                setIsReactivationNeeded(true);
+                toast.error("Your account was deleted. Please reactivate it to continue.");
+            } else {
+                toast.error(state.error);
+            }
         }
     }
+
+    const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
+        if (credentialResponse.credential) {
+            await googleLogin(credentialResponse.credential);
+            const state = useAuthStore.getState();
+            if (state.user) {
+                toast.success('Login successful');
+                router.push('/dashboard');
+            } else if (state.error) {
+                if (state.error === "Account deleted. Please reactivate your account.") {
+                    toast.error("Your account was deleted. Please login with password to reactivate.");
+                } else {
+                    toast.error(state.error);
+                }
+            }
+        }
+    };
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -99,8 +135,28 @@ export default function LoginPage() {
                                 </Link>
                             </div>
                             <Button type="submit" className="w-full" disabled={isLoading}>
-                                {isLoading ? 'Logging in...' : 'Login'}
+                                {isLoading ? 'Processing...' : isReactivationNeeded ? 'Reactivate Account' : 'Login'}
                             </Button>
+
+                            <div className="relative">
+                                <div className="absolute inset-0 flex items-center">
+                                    <span className="w-full border-t" />
+                                </div>
+                                <div className="relative flex justify-center text-xs uppercase">
+                                    <span className="bg-white dark:bg-gray-950 px-2 text-muted-foreground">
+                                        Or continue with
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-center">
+                                <GoogleLogin
+                                    onSuccess={handleGoogleSuccess}
+                                    onError={() => toast.error('Google Login Failed')}
+                                    theme="filled_blue"
+                                    shape="pill"
+                                />
+                            </div>
                         </form>
                     </Form>
                 </CardContent>

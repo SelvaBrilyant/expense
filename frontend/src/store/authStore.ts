@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import api from '@/lib/api';
-import { AxiosError } from 'axios';
+import { create } from "zustand";
+import api from "@/lib/api";
+import { AxiosError } from "axios";
 
 interface User {
   _id: string;
@@ -50,6 +50,9 @@ interface AuthState {
   logout: () => void;
   checkAuth: () => Promise<void>;
   updateProfile: (data: UpdateProfileData) => Promise<void>;
+  googleLogin: (credential: string) => Promise<void>;
+  deleteAccount: () => Promise<void>;
+  reactivateAccount: (credentials: LoginCredentials) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -60,13 +63,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (credentials: LoginCredentials) => {
     set({ isLoading: true, error: null });
     try {
-      const { data } = await api.post('/users/login', credentials);
-      localStorage.setItem('token', data.token);
+      const { data } = await api.post("/users/login", credentials);
+      localStorage.setItem("token", data.token);
       set({ user: data, isLoading: false });
     } catch (error: unknown) {
       const err = error as AxiosError<{ message: string }>;
       set({
-        error: err.response?.data?.message || 'Login failed',
+        error: err.response?.data?.message || "Login failed",
         isLoading: false,
       });
     }
@@ -75,32 +78,32 @@ export const useAuthStore = create<AuthState>((set) => ({
   register: async (userData: RegisterData) => {
     set({ isLoading: true, error: null });
     try {
-      const { data } = await api.post('/users', userData);
-      localStorage.setItem('token', data.token);
+      const { data } = await api.post("/users", userData);
+      localStorage.setItem("token", data.token);
       set({ user: data, isLoading: false });
     } catch (error: unknown) {
       const err = error as AxiosError<{ message: string }>;
       set({
-        error: err.response?.data?.message || 'Registration failed',
+        error: err.response?.data?.message || "Registration failed",
         isLoading: false,
       });
     }
   },
 
   logout: () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem("token");
     set({ user: null });
   },
 
   checkAuth: async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
       set({ isLoading: true, error: null });
       try {
-        const { data } = await api.get('/users/profile');
+        const { data } = await api.get("/users/profile");
         set({ user: data, isLoading: false });
       } catch {
-        localStorage.removeItem('token');
+        localStorage.removeItem("token");
         set({
           user: null,
           error: null, // Don't show error on initial load if token is invalid, just logout
@@ -115,16 +118,61 @@ export const useAuthStore = create<AuthState>((set) => ({
   updateProfile: async (userData: UpdateProfileData) => {
     set({ isLoading: true, error: null });
     try {
-      const { data } = await api.put('/users/profile', userData);
+      const { data } = await api.put("/users/profile", userData);
       // Update local storage token if it changed (though usually it doesn't on profile update unless password changed)
       if (data.token) {
-        localStorage.setItem('token', data.token);
+        localStorage.setItem("token", data.token);
       }
       set({ user: data, isLoading: false });
     } catch (error: unknown) {
       const err = error as AxiosError<{ message: string }>;
       set({
-        error: err.response?.data?.message || 'Profile update failed',
+        error: err.response?.data?.message || "Profile update failed",
+        isLoading: false,
+      });
+    }
+  },
+
+  googleLogin: async (credential: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const { data } = await api.post("/users/google", { credential });
+      localStorage.setItem("token", data.token);
+      set({ user: data, isLoading: false });
+    } catch (error: unknown) {
+      const err = error as AxiosError<{ message: string }>;
+      set({
+        error: err.response?.data?.message || "Google login failed",
+        isLoading: false,
+      });
+    }
+  },
+
+  deleteAccount: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      await api.delete("/users/profile");
+      localStorage.removeItem("token");
+      set({ user: null, isLoading: false });
+    } catch (error: unknown) {
+      const err = error as AxiosError<{ message: string }>;
+      set({
+        error: err.response?.data?.message || "Account deletion failed",
+        isLoading: false,
+      });
+    }
+  },
+
+  reactivateAccount: async (credentials: LoginCredentials) => {
+    set({ isLoading: true, error: null });
+    try {
+      const { data } = await api.post("/users/reactivate", credentials);
+      localStorage.setItem("token", data.token);
+      set({ user: data, isLoading: false });
+    } catch (error: unknown) {
+      const err = error as AxiosError<{ message: string }>;
+      set({
+        error: err.response?.data?.message || "Reactivation failed",
         isLoading: false,
       });
     }

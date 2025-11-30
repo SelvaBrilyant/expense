@@ -80,6 +80,147 @@ export const authUser = async (req: Request, res: Response) => {
   });
 
   if (user && (await bcrypt.compare(password, user.password))) {
+    if (user.isDeleted) {
+      res.status(403);
+      throw new Error("Account deleted. Please reactivate your account.");
+    }
+
+    res.json({
+      _id: user.id,
+      name: user.name,
+      email: user.email,
+      profilePicture: user.profilePicture,
+      coverPicture: user.coverPicture,
+      dateOfBirth: user.dateOfBirth,
+      bio: user.bio,
+      phoneNumber: user.phoneNumber,
+      token: generateToken(user.id),
+    });
+  } else {
+    res.status(401);
+    throw new Error("Invalid email or password");
+  }
+};
+
+// @desc    Google Auth
+// @route   POST /api/users/google
+// @access  Public
+export const googleAuth = async (req: Request, res: Response) => {
+  const { credential } = req.body;
+  const { OAuth2Client } = require("google-auth-library");
+  const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const { email, name, picture, sub: googleId } = payload;
+
+    let user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (user) {
+      // If user exists but no googleId, link it
+      if (!user.googleId) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { googleId },
+        });
+      }
+
+      if (user.isDeleted) {
+        res.status(403);
+        throw new Error("Account deleted. Please reactivate your account.");
+      }
+    } else {
+      // Create new user
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(
+        Math.random().toString(36),
+        salt
+      ); // Random password
+
+      user = await prisma.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          profilePicture: picture,
+          googleId,
+        },
+      });
+
+      // Send onboarding email for new Google users too
+      sendOnboardingEmail(user.email, user.name || "User");
+    }
+
+    res.json({
+      _id: user.id,
+      name: user.name,
+      email: user.email,
+      profilePicture: user.profilePicture,
+      coverPicture: user.coverPicture,
+      dateOfBirth: user.dateOfBirth,
+      bio: user.bio,
+      phoneNumber: user.phoneNumber,
+      token: generateToken(user.id),
+    });
+  } catch (error) {
+    res.status(400);
+    throw new Error("Google authentication failed");
+  }
+};
+
+// @desc    Soft delete user account
+// @route   DELETE /api/users/profile
+// @access  Private
+export const deleteAccount = async (req: Request, res: Response) => {
+  const user = await prisma.user.findUnique({
+    where: { id: (req as any).user.id },
+  });
+
+  if (user) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
+    });
+    res.json({ message: "Account deleted successfully" });
+  } else {
+    res.status(404);
+    throw new Error("User not found");
+  }
+};
+
+// @desc    Reactivate user account
+// @route   POST /api/users/reactivate
+// @access  Public
+export const reactivateAccount = async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (user && (await bcrypt.compare(password, user.password))) {
+    if (!user.isDeleted) {
+      res.status(400);
+      throw new Error("Account is already active");
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isDeleted: false,
+        deletedAt: null,
+      },
+    });
+
     res.json({
       _id: user.id,
       name: user.name,
