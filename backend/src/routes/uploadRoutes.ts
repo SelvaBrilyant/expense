@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { uploadImage } from '../controllers/uploadController';
+import { uploadImage, uploadInvoice } from '../controllers/uploadController';
 import { protect } from '../middlewares/authMiddleware';
 
 const router = express.Router();
@@ -54,5 +54,33 @@ const upload = multer({
  *         description: Server error
  */
 router.post('/', protect, upload.single('image'), uploadImage);
+
+/**
+ * @swagger
+ * /api/upload/invoice:
+ *   post:
+ *     summary: Upload an invoice (PDF or image)
+ *     tags: [Upload]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               invoice:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Invoice uploaded successfully
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
+ */
+router.post('/invoice', protect, upload.single('invoice'), uploadInvoice);
 
 export default router;

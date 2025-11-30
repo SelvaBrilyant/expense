@@ -14,6 +14,12 @@ interface Transaction {
   tags?: string[];
 }
 
+interface TransactionItem {
+  name: string;
+  quantity: number;
+  price: number;
+}
+
 interface TransactionInput {
   title: string;
   amount: number;
@@ -23,6 +29,8 @@ interface TransactionInput {
   date: string;
   notes?: string;
   tags?: string[];
+  invoiceUrl?: string;
+  items?: TransactionItem[];
 }
 
 interface TransactionState {

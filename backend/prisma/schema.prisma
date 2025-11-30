@@ -29,39 +29,41 @@ model User {
 }
 
 model Transaction {
-  id            String        @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String        @db.ObjectId
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String          @db.ObjectId
   title         String
   amount        Float
   type          TransactionType
-  category      String        // Storing category name or ID if we make a Category model
+  category      String // Storing category name or ID if we make a Category model
   paymentMethod PaymentMethod
   date          DateTime
   notes         String?
   location      String?
   tags          String[]
-  isRecurring   Boolean       @default(false)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  isRecurring   Boolean         @default(false)
+  invoiceUrl    String? // PDF invoice URL from Cloudinary
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  user  User              @relation(fields: [userId], references: [id])
+  items TransactionItem[]
 }
 
 model Budget {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String   @db.ObjectId
+  id        String       @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String       @db.ObjectId
   category  String
   amount    Float
   period    BudgetPeriod @default(MONTHLY)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   user User @relation(fields: [userId], references: [id])
 }
 
 model RecurringTransaction {
-  id            String        @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String        @db.ObjectId
+  id            String             @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String             @db.ObjectId
   title         String
   amount        Float
   type          TransactionType
@@ -69,9 +71,10 @@ model RecurringTransaction {
   paymentMethod PaymentMethod
   frequency     RecurringFrequency
   nextDueDate   DateTime
-  isActive      Boolean       @default(true)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  daysOfWeek    Int[]              // 0=Sunday, 1=Monday, ..., 6=Saturday. Empty means all days
+  isActive      Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
   user User @relation(fields: [userId], references: [id])
 }
@@ -136,4 +139,15 @@ enum RecurringFrequency {
   WEEKLY
   MONTHLY
   YEARLY
+}
+
+model TransactionItem {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  transactionId String   @db.ObjectId
+  name          String
+  quantity      Float
+  price         Float
+  createdAt     DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
 }

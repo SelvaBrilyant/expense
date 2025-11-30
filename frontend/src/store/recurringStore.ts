@@ -19,6 +19,7 @@ interface RecurringInput {
   startDate: string;
   endDate?: string;
   notes?: string;
+  daysOfWeek?: number[];
 }
 
 interface RecurringState {

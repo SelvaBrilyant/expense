@@ -62,3 +62,61 @@ export const uploadImage = async (req: Request, res: Response) => {
     throw new Error(error.message || 'Failed to upload image');
   }
 };
+
+// @desc    Upload invoice to Cloudinary
+// @route   POST /api/upload/invoice
+// @access  Private
+export const uploadInvoice = async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      res.status(400);
+      throw new Error('No file uploaded');
+    }
+
+    // Validate file type (PDF and images)
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      res.status(400);
+      throw new Error('Invalid file type. Only PDF and image files are allowed');
+    }
+
+    // Validate file size (5MB max)
+    const maxSize = 5 * 1024 * 1024;
+    if (req.file.size > maxSize) {
+      res.status(400);
+      throw new Error('File size exceeds 5MB limit');
+    }
+
+    // Upload to Cloudinary
+    const uploadPromise = new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'expense-tracker/invoices',
+          resource_type: 'auto', // Auto-detect resource type (image or raw for PDF)
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+
+      // Convert buffer to stream and pipe to Cloudinary
+      const bufferStream = new Readable();
+      bufferStream.push(req.file!.buffer);
+      bufferStream.push(null);
+      bufferStream.pipe(uploadStream);
+    });
+
+    const result = await uploadPromise as any;
+
+    res.status(200).json({
+      success: true,
+      url: result.secure_url,
+      publicId: result.public_id,
+      format: result.format,
+    });
+  } catch (error: any) {
+    res.status(500);
+    throw new Error(error.message || 'Failed to upload invoice');
+  }
+};

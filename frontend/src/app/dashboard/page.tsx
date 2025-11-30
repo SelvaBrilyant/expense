@@ -1,22 +1,68 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useTransactionStore } from '@/store/transactionStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Plus } from 'lucide-react';
+import { Plus, Download } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
+import { AIAdvisor } from '@/components/ai/AIAdvisor';
+import api from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function DashboardPage() {
     const { user } = useAuthStore();
     const { transactions, fetchTransactions, isLoading } = useTransactionStore();
+    const [aiInsights, setAiInsights] = useState('');
+    const [aiLoading, setAiLoading] = useState(false);
+    const [downloading, setDownloading] = useState(false);
 
     useEffect(() => {
         fetchTransactions();
+        fetchAIInsights();
     }, [fetchTransactions]);
+
+    const fetchAIInsights = async () => {
+        if (transactions.length === 0) return;
+
+        setAiLoading(true);
+        try {
+            const response = await api.post('/ai/insights');
+            setAiInsights(response.data.insights);
+        } catch (error) {
+            console.error('Failed to fetch AI insights:', error);
+        } finally {
+            setAiLoading(false);
+        }
+    };
+
+    const handleDownloadExcel = async () => {
+        setDownloading(true);
+        try {
+            const response = await api.get('/export/dashboard', {
+                responseType: 'blob',
+            });
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `dashboard-export-${new Date().getTime()}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            toast.success('Dashboard exported to Excel');
+        } catch (error) {
+            console.error('Export failed:', error);
+            toast.error('Failed to export dashboard');
+        } finally {
+            setDownloading(false);
+        }
+    };
 
     const totalIncome = transactions
         .filter((t) => t.type === 'INCOME')
@@ -33,14 +79,25 @@ export default function DashboardPage() {
             title="Dashboard"
             description={`Welcome back, ${user?.name || 'User'}`}
             action={
-                <Link href="/transactions/add">
-                    <Button className="bg-primary hover:bg-primary/90">
-                        <Plus className="mr-2 h-4 w-4" /> Add Transaction
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={handleDownloadExcel}
+                        disabled={downloading}
+                    >
+                        <Download className="mr-2 h-4 w-4" />
+                        {downloading ? 'Downloading...' : 'Download Excel'}
                     </Button>
-                </Link>
+                    <Link href="/transactions/add">
+                        <Button className="bg-primary hover:bg-primary/90">
+                            <Plus className="mr-2 h-4 w-4" /> Add Transaction
+                        </Button>
+                    </Link>
+                </div>
             }
         >
-            <div className="grid gap-4 md:grid-cols-3">
+            {/* Summary Cards */}
+            <div className="grid gap-4 md:grid-cols-3 mb-6">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
@@ -71,8 +128,20 @@ export default function DashboardPage() {
                 </Card>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="col-span-4">
+            {/* Charts */}
+            {transactions.length > 0 && (
+                <div className="mb-6">
+                    <DashboardCharts transactions={transactions} />
+                </div>
+            )}
+
+            {/* AI Advisor + Recent Transactions */}
+            <div className="grid gap-4 md:grid-cols-7">
+                <div className="col-span-4">
+                    <AIAdvisor insights={aiInsights} isLoading={aiLoading} />
+                </div>
+
+                <Card className="col-span-3">
                     <CardHeader>
                         <CardTitle>Recent Transactions</CardTitle>
                     </CardHeader>
@@ -100,17 +169,6 @@ export default function DashboardPage() {
                                     </div>
                                 ))
                             )}
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="col-span-3">
-                    <CardHeader>
-                        <CardTitle>Overview</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {/* Placeholder for Chart */}
-                        <div className="h-[200px] flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-md">
-                            Chart Coming Soon
                         </div>
                     </CardContent>
                 </Card>

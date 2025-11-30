@@ -22,6 +22,9 @@ import budgetRoutes from './routes/budgetRoutes';
 import aiRoutes from './routes/aiRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 import savingsRoutes from './routes/savingsRoutes';
+import recurringRoutes from './routes/recurringRoutes';
+import excelRoutes from './routes/excelRoutes';
+import transactionItemRoutes from './routes/transactionItemRoutes';
 import { initCronJobs } from './services/cronService';
 import { notFound, errorHandler } from './middlewares/errorMiddleware';
 
@@ -31,10 +34,13 @@ app.get('/', (req, res) => {
 
 app.use('/api/users', authRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/transactions/:transactionId/items', transactionItemRoutes);
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/savings', savingsRoutes);
+app.use('/api/recurring', recurringRoutes);
+app.use('/api/export', excelRoutes);
 
 // Swagger Documentation
 import swaggerUi from 'swagger-ui-express';

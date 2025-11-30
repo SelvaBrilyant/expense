@@ -33,6 +33,9 @@ export const getTransactions = async (req: Request, res: Response) => {
 
   const transactions = await prisma.transaction.findMany({
     where,
+    include: {
+      items: true, // Include transaction items
+    },
     orderBy: {
       date: 'desc',
     },
@@ -45,7 +48,7 @@ export const getTransactions = async (req: Request, res: Response) => {
 // @route   POST /api/transactions
 // @access  Private
 export const addTransaction = async (req: Request, res: Response) => {
-  const { title, amount, type, category, paymentMethod, date, notes, tags } = req.body;
+  const { title, amount, type, category, paymentMethod, date, notes, tags, invoiceUrl, items } = req.body;
 
   const transaction = await prisma.transaction.create({
     data: {
@@ -58,6 +61,17 @@ export const addTransaction = async (req: Request, res: Response) => {
       date: new Date(date),
       notes,
       tags,
+      invoiceUrl,
+      items: items && items.length > 0 ? {
+        create: items.map((item: any) => ({
+          name: item.name,
+          quantity: parseFloat(item.quantity),
+          price: parseFloat(item.price),
+        })),
+      } : undefined,
+    },
+    include: {
+      items: true,
     },
   });
 
@@ -69,7 +83,7 @@ export const addTransaction = async (req: Request, res: Response) => {
 // @access  Private
 export const updateTransaction = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { title, amount, type, category, paymentMethod, date, notes, tags } = req.body;
+  const { title, amount, type, category, paymentMethod, date, notes, tags, invoiceUrl, items } = req.body;
 
   const transaction = await prisma.transaction.findUnique({
     where: { id },
@@ -85,6 +99,13 @@ export const updateTransaction = async (req: Request, res: Response) => {
     throw new Error('User not authorized');
   }
 
+  // Delete existing items if updating with new items
+  if (items !== undefined) {
+    await prisma.transactionItem.deleteMany({
+      where: { transactionId: id },
+    });
+  }
+
   const updatedTransaction = await prisma.transaction.update({
     where: { id },
     data: {
@@ -96,6 +117,17 @@ export const updateTransaction = async (req: Request, res: Response) => {
       date: new Date(date),
       notes,
       tags,
+      invoiceUrl,
+      items: items && items.length > 0 ? {
+        create: items.map((item: any) => ({
+          name: item.name,
+          quantity: parseFloat(item.quantity),
+          price: parseFloat(item.price),
+        })),
+      } : undefined,
+    },
+    include: {
+      items: true,
     },
   });
 
