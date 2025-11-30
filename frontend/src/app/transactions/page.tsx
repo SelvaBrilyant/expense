@@ -1,0 +1,129 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useTransactionStore } from '@/store/transactionStore';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+
+const CATEGORIES = [
+    'All',
+    'Food',
+    'Travel',
+    'Groceries',
+    'Entertainment',
+    'Shopping',
+    'Bills',
+    'Investments',
+    'Loans',
+    'UPI Payments',
+    'Others',
+];
+
+export default function TransactionsPage() {
+    const { transactions, fetchTransactions, deleteTransaction, isLoading } =
+        useTransactionStore();
+    const [typeFilter, setTypeFilter] = useState<string>('ALL');
+    const [categoryFilter, setCategoryFilter] = useState<string>('All');
+
+    useEffect(() => {
+        const filters: any = {};
+        if (typeFilter !== 'ALL') filters.type = typeFilter;
+        if (categoryFilter !== 'All') filters.category = categoryFilter;
+        fetchTransactions(filters);
+    }, [fetchTransactions, typeFilter, categoryFilter]);
+
+    const handleDelete = async (id: string) => {
+        if (confirm('Are you sure you want to delete this transaction?')) {
+            await deleteTransaction(id);
+            toast.success('Transaction deleted');
+        }
+    };
+
+    return (
+        <div className="p-8 space-y-8 bg-gray-50 min-h-screen dark:bg-gray-900">
+            <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
+                <Link href="/transactions/add">
+                    <Button>
+                        <Plus className="mr-2 h-4 w-4" /> Add Transaction
+                    </Button>
+                </Link>
+            </div>
+
+            <div className="flex gap-4">
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="ALL">All Types</SelectItem>
+                        <SelectItem value="INCOME">Income</SelectItem>
+                        <SelectItem value="EXPENSE">Expense</SelectItem>
+                    </SelectContent>
+                </Select>
+
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {CATEGORIES.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                                {cat}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
+            <div className="space-y-4">
+                {isLoading ? (
+                    <p>Loading transactions...</p>
+                ) : transactions.length === 0 ? (
+                    <p>No transactions found.</p>
+                ) : (
+                    transactions.map((t) => (
+                        <Card key={t.id}>
+                            <CardContent className="flex items-center justify-between p-6">
+                                <div className="flex flex-col space-y-1">
+                                    <span className="font-semibold">{t.title}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        {t.category} • {new Date(t.date).toLocaleDateString()}
+                                    </span>
+                                    {t.notes && (
+                                        <span className="text-xs text-gray-500">{t.notes}</span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <span
+                                        className={`font-bold ${t.type === 'INCOME' ? 'text-green-600' : 'text-red-600'
+                                            }`}
+                                    >
+                                        {t.type === 'INCOME' ? '+' : '-'}₹{t.amount.toFixed(2)}
+                                    </span>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleDelete(t.id)}
+                                    >
+                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+}
