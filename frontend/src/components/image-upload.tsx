@@ -12,6 +12,7 @@ interface ImageUploadProps {
     className?: string;
     aspectRatio?: "square" | "wide";
     imageClassName?: string;
+    onUpload?: (file: File) => Promise<void>;
 }
 
 export function ImageUpload({
@@ -20,6 +21,7 @@ export function ImageUpload({
     className,
     aspectRatio = "square",
     imageClassName,
+    onUpload,
 }: ImageUploadProps) {
     const [preview, setPreview] = React.useState<string | undefined>(value);
     const [isUploading, setIsUploading] = React.useState(false);
@@ -29,8 +31,8 @@ export function ImageUpload({
         setPreview(value);
     }, [value]);
 
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
         if (!file) return;
 
         // Validate file type
@@ -45,30 +47,34 @@ export function ImageUpload({
             return;
         }
 
+        // Create preview immediately for better UX
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setPreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+
         setIsUploading(true);
 
         try {
-            // Create preview immediately for better UX
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            // If custom onUpload handler is provided, use it
+            if (onUpload) {
+                await onUpload(file);
+            } else {
+                // Otherwise use default upload logic
+                const formData = new FormData();
+                formData.append('image', file);
 
-            // Upload to backend
-            const formData = new FormData();
-            formData.append('image', file);
+                const { data } = await api.post('/upload', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                });
 
-            const { data } = await api.post('/upload', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
-
-            // Update with the Cloudinary URL
-            setPreview(data.url);
-            onChange(data.url);
-            toast.success('Image uploaded successfully');
+                setPreview(data.url);
+                onChange(data.url);
+                toast.success('Image uploaded successfully');
+            }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
             toast.error(errorMessage);

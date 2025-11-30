@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ImageUpload } from '@/components/image-upload';
+import api from '@/lib/api';
 
 function SettingsContent() {
     const { user, updateProfile, isLoading } = useAuthStore();
@@ -30,6 +31,41 @@ function SettingsContent() {
     const fields = ['name', 'email', 'bio', 'phoneNumber', 'dateOfBirth', 'profilePicture', 'coverPicture'];
     const filledFields = fields.filter(field => formData[field as keyof typeof formData]);
     const completion = Math.round((filledFields.length / fields.length) * 100);
+
+    const handleImageUpload = async (file: File, type: 'profile' | 'cover') => {
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please select an image file');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('File size must be less than 5MB');
+            return;
+        }
+
+        try {
+            const formDataObj = new FormData();
+            formDataObj.append('image', file);
+
+            const { data } = await api.post('/upload', formDataObj, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+
+            const updatedData = {
+                ...formData,
+                [type === 'profile' ? 'profilePicture' : 'coverPicture']: data.url
+            };
+
+            setFormData(updatedData);
+
+            // Automatically update the profile in the database
+            await updateProfile(updatedData);
+
+            toast.success(`${type === 'profile' ? 'Profile' : 'Cover'} photo updated successfully`);
+        } catch {
+            toast.error('Failed to upload image');
+        }
+    };
 
     useEffect(() => {
         if (completion === 100) {
@@ -104,6 +140,7 @@ function SettingsContent() {
                                             value={formData.coverPicture}
                                             onChange={(url) => setFormData(prev => ({ ...prev, coverPicture: url }))}
                                             aspectRatio="wide"
+                                            onUpload={(file) => handleImageUpload(file, 'cover')}
                                         />
                                         <p className="text-white text-xs mt-2">Click to upload cover photo</p>
                                         <p className="text-white/70 text-xs">Recommended: 1200x400</p>
@@ -135,6 +172,7 @@ function SettingsContent() {
                                                         aspectRatio="square"
                                                         imageClassName="rounded-full"
                                                         className='rounded-full'
+                                                        onUpload={(file) => handleImageUpload(file, 'profile')}
                                                     />
                                                 </div>
                                             </div>
