@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '@/lib/api';
+import { AxiosError } from 'axios';
 
 interface RecurringTransaction {
   id: string;
@@ -10,28 +11,39 @@ interface RecurringTransaction {
   isActive: boolean;
 }
 
+interface RecurringInput {
+  title: string;
+  amount: number;
+  category: string;
+  frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+  startDate: string;
+  endDate?: string;
+  notes?: string;
+}
+
 interface RecurringState {
-  recurring: RecurringTransaction[];
+  recurringTransactions: RecurringTransaction[];
   isLoading: boolean;
   error: string | null;
   fetchRecurring: () => Promise<void>;
-  addRecurring: (recurring: any) => Promise<void>;
+  addRecurring: (recurring: RecurringInput) => Promise<void>;
   deleteRecurring: (id: string) => Promise<void>;
 }
 
 export const useRecurringStore = create<RecurringState>((set) => ({
-  recurring: [],
+  recurringTransactions: [],
   isLoading: false,
   error: null,
 
   fetchRecurring: async () => {
     set({ isLoading: true, error: null });
     try {
-      const { data } = await api.get('/recurring'); // Need to implement this route if not done
-      set({ recurring: data, isLoading: false });
-    } catch (error: any) {
+      const { data } = await api.get('/recurring');
+      set({ recurringTransactions: data, isLoading: false });
+    } catch (error: unknown) {
+      const err = error as AxiosError<{ message: string }>;
       set({
-        error: error.response?.data?.message || 'Failed to fetch recurring transactions',
+        error: err.response?.data?.message || 'Failed to fetch recurring transactions',
         isLoading: false,
       });
     }
@@ -42,12 +54,13 @@ export const useRecurringStore = create<RecurringState>((set) => ({
     try {
       const { data } = await api.post('/recurring', recurring);
       set((state) => ({
-        recurring: [...state.recurring, data],
+        recurringTransactions: [...state.recurringTransactions, data],
         isLoading: false,
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as AxiosError<{ message: string }>;
       set({
-        error: error.response?.data?.message || 'Failed to add recurring transaction',
+        error: err.response?.data?.message || 'Failed to add recurring transaction',
         isLoading: false,
       });
     }
@@ -58,12 +71,13 @@ export const useRecurringStore = create<RecurringState>((set) => ({
     try {
       await api.delete(`/recurring/${id}`);
       set((state) => ({
-        recurring: state.recurring.filter((r) => r.id !== id),
+        recurringTransactions: state.recurringTransactions.filter((r) => r.id !== id),
         isLoading: false,
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as AxiosError<{ message: string }>;
       set({
-        error: error.response?.data?.message || 'Failed to delete recurring transaction',
+        error: err.response?.data?.message || 'Failed to delete recurring transaction',
         isLoading: false,
       });
     }

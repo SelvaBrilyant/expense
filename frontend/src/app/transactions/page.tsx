@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTransactionStore } from '@/store/transactionStore';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
     Select,
     SelectContent,
@@ -38,11 +38,12 @@ export default function TransactionsPage() {
     const [categoryFilter, setCategoryFilter] = useState<string>('All');
 
     useEffect(() => {
-        const filters: any = {};
-        if (typeFilter !== 'ALL') filters.type = typeFilter;
-        if (categoryFilter !== 'All') filters.category = categoryFilter;
+        const filters: Record<string, string> = {};
+        if (typeFilter !== 'all') filters.type = typeFilter;
+        if (categoryFilter !== 'all') filters.category = categoryFilter;
+
         fetchTransactions(filters);
-    }, [fetchTransactions, typeFilter, categoryFilter]);
+    }, [typeFilter, categoryFilter, fetchTransactions]);
 
     const handleDelete = async (id: string) => {
         if (confirm('Are you sure you want to delete this transaction?')) {

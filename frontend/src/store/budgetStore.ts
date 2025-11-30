@@ -1,8 +1,15 @@
 import { create } from 'zustand';
 import api from '@/lib/api';
+import { AxiosError } from 'axios';
 
 interface Budget {
   id: string;
+  category: string;
+  amount: number;
+  period: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+}
+
+interface BudgetInput {
   category: string;
   amount: number;
   period: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
@@ -13,7 +20,7 @@ interface BudgetState {
   isLoading: boolean;
   error: string | null;
   fetchBudgets: () => Promise<void>;
-  addBudget: (budget: any) => Promise<void>;
+  addBudget: (budget: BudgetInput) => Promise<void>;
   deleteBudget: (id: string) => Promise<void>;
 }
 
@@ -27,9 +34,10 @@ export const useBudgetStore = create<BudgetState>((set) => ({
     try {
       const { data } = await api.get('/budgets');
       set({ budgets: data, isLoading: false });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as AxiosError<{ message: string }>;
       set({
-        error: error.response?.data?.message || 'Failed to fetch budgets',
+        error: err.response?.data?.message || 'Failed to fetch budgets',
         isLoading: false,
       });
     }
@@ -43,9 +51,10 @@ export const useBudgetStore = create<BudgetState>((set) => ({
         budgets: [...state.budgets, data],
         isLoading: false,
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as AxiosError<{ message: string }>;
       set({
-        error: error.response?.data?.message || 'Failed to add budget',
+        error: err.response?.data?.message || 'Failed to add budget',
         isLoading: false,
       });
     }
@@ -59,9 +68,10 @@ export const useBudgetStore = create<BudgetState>((set) => ({
         budgets: state.budgets.filter((b) => b.id !== id),
         isLoading: false,
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as AxiosError<{ message: string }>;
       set({
-        error: error.response?.data?.message || 'Failed to delete budget',
+        error: err.response?.data?.message || 'Failed to delete budget',
         isLoading: false,
       });
     }
