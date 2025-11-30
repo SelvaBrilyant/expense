@@ -16,6 +16,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  profilePicture String?
+  coverPicture   String?
+  dateOfBirth    DateTime?
+  bio            String?
+  phoneNumber    String?
+
   transactions Transaction[]
   budgets      Budget[]
   recurring    RecurringTransaction[]

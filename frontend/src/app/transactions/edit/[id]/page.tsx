@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useTransactionStore } from '@/store/transactionStore';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
     title: z.string().min(2, 'Title is required'),
@@ -64,9 +65,12 @@ const INCOME_CATEGORIES = [
 
 const PAYMENT_METHODS = ['CASH', 'CARD', 'UPI', 'WALLET', 'NET_BANKING', 'OTHER'];
 
-export default function AddTransactionPage() {
+export default function EditTransactionPage() {
     const router = useRouter();
-    const { addTransaction, isLoading } = useTransactionStore();
+    const params = useParams();
+    const id = params.id as string;
+    const { transactions, updateTransaction, isLoading } = useTransactionStore();
+    const [transaction, setTransaction] = useState<any>(null);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -81,34 +85,60 @@ export default function AddTransactionPage() {
         },
     });
 
+    useEffect(() => {
+        const found = transactions.find((t) => t.id === id);
+        if (found) {
+            setTransaction(found);
+            form.reset({
+                title: found.title,
+                amount: found.amount.toString(),
+                type: found.type,
+                category: found.category,
+                paymentMethod: found.paymentMethod,
+                date: new Date(found.date).toISOString().split('T')[0],
+                notes: found.notes || '',
+            });
+        }
+    }, [id, transactions, form]);
+
     const type = form.watch('type');
 
     // Reset category when type changes
     useEffect(() => {
-        form.setValue('category', '');
-    }, [type, form]);
+        if (transaction && transaction.type !== type) {
+            form.setValue('category', '');
+        }
+    }, [type, form, transaction]);
 
     const categories = type === 'INCOME' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
-        await addTransaction({
+        await updateTransaction(id, {
             ...values,
             amount: Number(values.amount),
         });
         const state = useTransactionStore.getState();
         if (!state.error) {
-            toast.success('Transaction added successfully');
-            router.push('/dashboard');
+            toast.success('Transaction updated successfully');
+            router.push('/transactions');
         } else {
             toast.error(state.error);
         }
+    }
+
+    if (!transaction) {
+        return (
+            <div className="p-8 flex justify-center items-center bg-gray-50 min-h-screen dark:bg-gray-900">
+                <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+            </div>
+        );
     }
 
     return (
         <div className="p-8 flex justify-center bg-gray-50 min-h-screen dark:bg-gray-900">
             <Card className="w-full max-w-2xl">
                 <CardHeader>
-                    <CardTitle>Add Transaction</CardTitle>
+                    <CardTitle>Edit Transaction</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Form {...form}>
@@ -150,7 +180,7 @@ export default function AddTransactionPage() {
                                             <FormLabel>Type</FormLabel>
                                             <Select
                                                 onValueChange={field.onChange}
-                                                defaultValue={field.value}
+                                                value={field.value}
                                             >
                                                 <FormControl>
                                                     <SelectTrigger>
@@ -205,7 +235,7 @@ export default function AddTransactionPage() {
                                             <FormLabel>Payment Method</FormLabel>
                                             <Select
                                                 onValueChange={field.onChange}
-                                                defaultValue={field.value}
+                                                value={field.value}
                                             >
                                                 <FormControl>
                                                     <SelectTrigger>
@@ -263,7 +293,7 @@ export default function AddTransactionPage() {
                                     Cancel
                                 </Button>
                                 <Button type="submit" disabled={isLoading}>
-                                    {isLoading ? 'Adding...' : 'Add Transaction'}
+                                    {isLoading ? 'Updating...' : 'Update Transaction'}
                                 </Button>
                             </div>
                         </form>

@@ -19,6 +19,7 @@ interface TransactionState {
   error: string | null;
   fetchTransactions: (filters?: any) => Promise<void>;
   addTransaction: (transaction: any) => Promise<void>;
+  updateTransaction: (id: string, transaction: any) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
 }
 
@@ -52,6 +53,24 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
     } catch (error: any) {
       set({
         error: error.response?.data?.message || 'Failed to add transaction',
+        isLoading: false,
+      });
+    }
+  },
+
+  updateTransaction: async (id, transaction) => {
+    set({ isLoading: true, error: null });
+    try {
+      const { data } = await api.put(`/transactions/${id}`, transaction);
+      set((state) => ({
+        transactions: state.transactions.map((t) =>
+          t.id === id ? data : t
+        ),
+        isLoading: false,
+      }));
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Failed to update transaction',
         isLoading: false,
       });
     }
