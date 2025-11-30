@@ -22,6 +22,10 @@ model User {
   bio            String?
   phoneNumber    String?
 
+  // Password reset fields
+  resetPasswordOtp       String?
+  resetPasswordOtpExpiry DateTime?
+
   transactions Transaction[]
   budgets      Budget[]
   recurring    RecurringTransaction[]
