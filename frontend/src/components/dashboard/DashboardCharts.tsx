@@ -46,6 +46,11 @@ export function DashboardCharts({ transactions }: DashboardChartsProps) {
         .filter((t) => t.type === 'EXPENSE')
         .reduce((acc: { [key: string]: { amount: number; date: Date } }, t) => {
             const date = new Date(t.date);
+            // Handle invalid dates
+            if (isNaN(date.getTime())) {
+                console.warn('Invalid date found in transaction:', t);
+                return acc;
+            }
             const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
             if (!acc[yearMonth]) {
                 acc[yearMonth] = { amount: 0, date };
@@ -60,7 +65,7 @@ export function DashboardCharts({ transactions }: DashboardChartsProps) {
                 month: 'short',
                 year: 'numeric',
             }),
-            amount: data.amount,
+            amount: Number(data.amount.toFixed(2)), // Round to 2 decimal places
             sortKey: key,
         }))
         .sort((a, b) => a.sortKey.localeCompare(b.sortKey)) // Sort chronologically
@@ -102,22 +107,28 @@ export function DashboardCharts({ transactions }: DashboardChartsProps) {
                     <CardTitle>Monthly Expenses Trend</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={lineChartData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="month" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Line
-                                type="monotone"
-                                dataKey="amount"
-                                stroke="#8B5CF6"
-                                strokeWidth={2}
-                                name="Expenses"
-                            />
-                        </LineChart>
-                    </ResponsiveContainer>
+                    {lineChartData.length === 0 ? (
+                        <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                            <p>No expense data available. Add some transactions to see the trend.</p>
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <LineChart data={lineChartData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="month" />
+                                <YAxis />
+                                <Tooltip formatter={(value) => `₹${Number(value).toFixed(2)}`} />
+                                <Legend />
+                                <Line
+                                    type="monotone"
+                                    dataKey="amount"
+                                    stroke="#8B5CF6"
+                                    strokeWidth={2}
+                                    name="Expenses"
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    )}
                 </CardContent>
             </Card>
 
@@ -127,28 +138,34 @@ export function DashboardCharts({ transactions }: DashboardChartsProps) {
                     <CardTitle>Expense Distribution</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <PieChart>
-                            <Pie
-                                data={pieChartData}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={(props) => `${props.name} (${props.payload.percentage}%)`}
-                                outerRadius={80}
-                                fill="#8884d8"
-                                dataKey="value"
-                            >
-                                {pieChartData.map((entry, index) => (
-                                    <Cell
-                                        key={`cell-${index}`}
-                                        fill={COLORS[index % COLORS.length]}
-                                    />
-                                ))}
-                            </Pie>
-                            <Tooltip />
-                        </PieChart>
-                    </ResponsiveContainer>
+                    {pieChartData.length === 0 ? (
+                        <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                            <p>No expense data available</p>
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <PieChart>
+                                <Pie
+                                    data={pieChartData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={(props) => `${props.name} (${props.payload.percentage}%)`}
+                                    outerRadius={80}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                >
+                                    {pieChartData.map((entry, index) => (
+                                        <Cell
+                                            key={`cell-${index}`}
+                                            fill={COLORS[index % COLORS.length]}
+                                        />
+                                    ))}
+                                </Pie>
+                                <Tooltip formatter={(value) => `₹${Number(value).toFixed(2)}`} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    )}
                 </CardContent>
             </Card>
 
@@ -158,16 +175,22 @@ export function DashboardCharts({ transactions }: DashboardChartsProps) {
                     <CardTitle>Expenses by Category</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={barChartData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="category" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Bar dataKey="amount" fill="#EC4899" name="Amount" />
-                        </BarChart>
-                    </ResponsiveContainer>
+                    {barChartData.length === 0 ? (
+                        <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                            <p>No expense data available</p>
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={barChartData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="category" />
+                                <YAxis />
+                                <Tooltip formatter={(value) => `₹${Number(value).toFixed(2)}`} />
+                                <Legend />
+                                <Bar dataKey="amount" fill="#EC4899" name="Amount" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    )}
                 </CardContent>
             </Card>
         </div>

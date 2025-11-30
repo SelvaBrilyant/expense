@@ -38,8 +38,8 @@ export default function TransactionsPage() {
 
     useEffect(() => {
         const filters: Record<string, string> = {};
-        if (typeFilter !== 'all') filters.type = typeFilter;
-        if (categoryFilter !== 'all') filters.category = categoryFilter;
+        if (typeFilter !== 'ALL') filters.type = typeFilter;
+        if (categoryFilter !== 'All') filters.category = categoryFilter;
 
         fetchTransactions(filters);
     }, [typeFilter, categoryFilter, fetchTransactions]);

@@ -23,18 +23,26 @@ export const getRecurringTransactions = async (req: Request, res: Response) => {
 // @route   POST /api/recurring
 // @access  Private
 export const createRecurringTransaction = async (req: Request, res: Response) => {
-  const { title, amount, type, category, paymentMethod, frequency, nextDueDate, daysOfWeek } = req.body;
+  const { title, amount, type, category, paymentMethod, frequency, startDate, nextDueDate, daysOfWeek } = req.body;
+
+  // Use startDate if provided, otherwise use nextDueDate
+  const dueDate = startDate || nextDueDate;
+  
+  if (!dueDate) {
+    res.status(400);
+    throw new Error('Either startDate or nextDueDate is required');
+  }
 
   const recurring = await prisma.recurringTransaction.create({
     data: {
       userId: (req as any).user.id,
       title,
       amount: parseFloat(amount),
-      type,
+      type: type || 'EXPENSE', // Default to EXPENSE if not provided
       category,
-      paymentMethod,
+      paymentMethod: paymentMethod || 'OTHER', // Default to OTHER if not provided
       frequency,
-      nextDueDate: new Date(nextDueDate),
+      nextDueDate: new Date(dueDate),
       daysOfWeek: daysOfWeek || [],
     },
   });

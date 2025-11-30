@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRecurringStore } from '@/store/recurringStore';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -19,10 +18,11 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { DEFAULT_CATEGORIES } from '@/lib/categoryConstants';
+import { RecurringDataTable } from '@/components/recurring/RecurringDataTable';
 
 export default function RecurringPage() {
     const { recurringTransactions: recurring, fetchRecurring, addRecurring, deleteRecurring, isLoading } =
@@ -36,9 +36,11 @@ export default function RecurringPage() {
         nextDueDate: '',
     });
     const [selectedDays, setSelectedDays] = useState<number[]>([]);
+    const [frequencyFilter, setFrequencyFilter] = useState<string>('ALL');
+    const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
     useEffect(() => {
-        // fetchRecurring(); // Uncomment when backend route is ready
+        fetchRecurring();
     }, [fetchRecurring]);
 
     const handleAddRecurring = async () => {
@@ -88,6 +90,14 @@ export default function RecurringPage() {
     ];
 
     const showDaySelector = newRecurring.frequency === 'DAILY' || newRecurring.frequency === 'WEEKLY';
+
+    // Filter recurring transactions
+    const filteredRecurring = recurring.filter((r) => {
+        if (frequencyFilter !== 'ALL' && r.frequency !== frequencyFilter) return false;
+        if (statusFilter === 'ACTIVE' && !r.isActive) return false;
+        if (statusFilter === 'PAUSED' && r.isActive) return false;
+        return true;
+    });
 
     return (
         <PageLayout
@@ -235,34 +245,41 @@ export default function RecurringPage() {
                 </Dialog>
             }
         >
-            <div className="grid gap-4 md:grid-cols-3">
-                {isLoading ? (
-                    <p>Loading...</p>
-                ) : recurring.length === 0 ? (
-                    <p>No recurring payments found.</p>
-                ) : (
-                    recurring.map((r) => (
-                        <Card key={r.id}>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">{r.title}</CardTitle>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleDelete(r.id)}
-                                >
-                                    <Trash2 className="h-4 w-4 text-red-500" />
-                                </Button>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">₹{r.amount}</div>
-                                <p className="text-xs text-muted-foreground">
-                                    {r.frequency.toLowerCase()} • Next due: {new Date(r.nextDueDate).toLocaleDateString()}
-                                </p>
-                            </CardContent>
-                        </Card>
-                    ))
-                )}
+            {/* Filters */}
+            <div className="flex gap-4 mb-6">
+                <Select value={frequencyFilter} onValueChange={setFrequencyFilter}>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by Frequency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="ALL">All Frequencies</SelectItem>
+                        <SelectItem value="DAILY">Daily</SelectItem>
+                        <SelectItem value="WEEKLY">Weekly</SelectItem>
+                        <SelectItem value="MONTHLY">Monthly</SelectItem>
+                        <SelectItem value="YEARLY">Yearly</SelectItem>
+                    </SelectContent>
+                </Select>
+
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="ALL">All Status</SelectItem>
+                        <SelectItem value="ACTIVE">Active</SelectItem>
+                        <SelectItem value="PAUSED">Paused</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
+
+            {isLoading ? (
+                <p>Loading...</p>
+            ) : (
+                <RecurringDataTable
+                    recurring={filteredRecurring}
+                    onDelete={handleDelete}
+                />
+            )}
         </PageLayout>
     );
 }

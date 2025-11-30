@@ -6,9 +6,11 @@ interface RecurringTransaction {
   id: string;
   title: string;
   amount: number;
+  category: string;
   frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
   nextDueDate: string;
   isActive: boolean;
+  daysOfWeek?: number[];
 }
 
 interface RecurringInput {

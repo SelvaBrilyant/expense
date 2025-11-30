@@ -23,51 +23,43 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { ArrowUpDown, Download, Pencil, Trash2, FileText } from 'lucide-react';
-import Link from 'next/link';
+import { ArrowUpDown, Download, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 
-interface Transaction {
+interface RecurringTransaction {
     id: string;
     title: string;
     amount: number;
-    type: string;
+    frequency: string;
     category: string;
-    date: string;
-    notes?: string;
-    invoiceUrl?: string;
-    items?: Array<{ id: string; name: string; quantity: number; price: number }>;
+    nextDueDate: string;
+    isActive: boolean;
+    daysOfWeek?: number[];
 }
 
-interface TransactionsDataTableProps {
-    transactions: Transaction[];
+interface RecurringDataTableProps {
+    recurring: RecurringTransaction[];
     onDelete: (id: string) => void;
+    onToggle?: (id: string) => void;
 }
 
-export function TransactionsDataTable({ transactions, onDelete }: TransactionsDataTableProps) {
+const DAYS_MAP: Record<number, string> = {
+    0: 'Sun',
+    1: 'Mon',
+    2: 'Tue',
+    3: 'Wed',
+    4: 'Thu',
+    5: 'Fri',
+    6: 'Sat',
+};
+
+export function RecurringDataTable({ recurring, onDelete, onToggle }: RecurringDataTableProps) {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [globalFilter, setGlobalFilter] = useState('');
 
-    const columns: ColumnDef<Transaction>[] = [
-        {
-            accessorKey: 'date',
-            header: ({ column }) => {
-                return (
-                    <Button
-                        variant="ghost"
-                        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-                    >
-                        Date
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                );
-            },
-            cell: ({ row }) => {
-                return new Date(row.getValue('date')).toLocaleDateString();
-            },
-        },
+    const columns: ColumnDef<RecurringTransaction>[] = [
         {
             accessorKey: 'title',
             header: ({ column }) => {
@@ -82,20 +74,27 @@ export function TransactionsDataTable({ transactions, onDelete }: TransactionsDa
                 );
             },
             cell: ({ row }) => {
-                const hasInvoice = row.original.invoiceUrl;
-                const itemsCount = row.original.items?.length || 0;
-
+                return <div className="font-medium">{row.getValue('title')}</div>;
+            },
+        },
+        {
+            accessorKey: 'amount',
+            header: ({ column }) => {
                 return (
-                    <div className="flex items-center gap-2">
-                        <span>{row.getValue('title')}</span>
-                        {hasInvoice && (
-                            <FileText className="h-4 w-4 text-blue-500" />
-                        )}
-                        {itemsCount > 0 && (
-                            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
-                                {itemsCount} items
-                            </span>
-                        )}
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                    >
+                        Amount
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                );
+            },
+            cell: ({ row }) => {
+                const amount = parseFloat(row.getValue('amount'));
+                return (
+                    <div className="font-bold text-red-600">
+                        {formatCurrency(amount)}
                     </div>
                 );
             },
@@ -118,56 +117,65 @@ export function TransactionsDataTable({ transactions, onDelete }: TransactionsDa
             },
         },
         {
-            accessorKey: 'type',
+            accessorKey: 'frequency',
             header: ({ column }) => {
                 return (
                     <Button
                         variant="ghost"
                         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                     >
-                        Type
+                        Frequency
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                 );
             },
             cell: ({ row }) => {
-                const type = row.getValue('type') as string;
+                const frequency = row.getValue('frequency') as string;
+                const daysOfWeek = row.original.daysOfWeek;
+
                 return (
-                    <span
-                        className={`px-2 py-1 rounded text-xs font-medium ${type === 'INCOME'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
-                            }`}
-                    >
-                        {type}
-                    </span>
+                    <div>
+                        <div className="font-medium">{frequency}</div>
+                        {daysOfWeek && daysOfWeek.length > 0 && (
+                            <div className="text-xs text-muted-foreground">
+                                {daysOfWeek.map(d => DAYS_MAP[d]).join(', ')}
+                            </div>
+                        )}
+                    </div>
                 );
             },
         },
         {
-            accessorKey: 'amount',
+            accessorKey: 'nextDueDate',
             header: ({ column }) => {
                 return (
                     <Button
                         variant="ghost"
                         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                     >
-                        Amount
+                        Next Due
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                 );
             },
             cell: ({ row }) => {
-                const amount = parseFloat(row.getValue('amount'));
-                const type = row.original.type;
+                return new Date(row.getValue('nextDueDate')).toLocaleDateString();
+            },
+        },
+        {
+            accessorKey: 'isActive',
+            header: 'Status',
+            cell: ({ row }) => {
+                const isActive = row.getValue('isActive') as boolean;
                 return (
-                    <div
-                        className={`font-bold ${type === 'INCOME' ? 'text-green-600' : 'text-red-600'
+                    <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${isActive
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-100 text-gray-700'
                             }`}
                     >
-                        {type === 'INCOME' ? '+' : '-'}
-                        {formatCurrency(amount)}
-                    </div>
+                        {isActive ? 'Active' : 'Paused'}
+                    </span>
                 );
             },
         },
@@ -175,13 +183,23 @@ export function TransactionsDataTable({ transactions, onDelete }: TransactionsDa
             id: 'actions',
             header: 'Actions',
             cell: ({ row }) => {
+                const isActive = row.original.isActive;
                 return (
                     <div className="flex gap-2">
-                        <Link href={`/transactions/edit/${row.original.id}`}>
-                            <Button variant="ghost" size="icon">
-                                <Pencil className="h-4 w-4 text-blue-500" />
+                        {onToggle && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => onToggle(row.original.id)}
+                                title={isActive ? 'Pause' : 'Resume'}
+                            >
+                                {isActive ? (
+                                    <ToggleRight className="h-4 w-4 text-green-500" />
+                                ) : (
+                                    <ToggleLeft className="h-4 w-4 text-gray-500" />
+                                )}
                             </Button>
-                        </Link>
+                        )}
                         <Button
                             variant="ghost"
                             size="icon"
@@ -196,7 +214,7 @@ export function TransactionsDataTable({ transactions, onDelete }: TransactionsDa
     ];
 
     const table = useReactTable({
-        data: transactions,
+        data: recurring,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -218,28 +236,27 @@ export function TransactionsDataTable({ transactions, onDelete }: TransactionsDa
     });
 
     const exportToExcel = () => {
-        const exportData = transactions.map((t) => ({
-            Date: new Date(t.date).toLocaleDateString(),
-            Title: t.title,
-            Category: t.category,
-            Type: t.type,
-            Amount: t.amount,
-            Notes: t.notes || '',
-            'Has Invoice': t.invoiceUrl ? 'Yes' : 'No',
-            'Items Count': t.items?.length || 0,
+        const exportData = recurring.map((r) => ({
+            Title: r.title,
+            Amount: r.amount,
+            Category: r.category,
+            Frequency: r.frequency,
+            'Days of Week': r.daysOfWeek?.map(d => DAYS_MAP[d]).join(', ') || 'All',
+            'Next Due Date': new Date(r.nextDueDate).toLocaleDateString(),
+            Status: r.isActive ? 'Active' : 'Paused',
         }));
 
         const ws = XLSX.utils.json_to_sheet(exportData);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
-        XLSX.writeFile(wb, `transactions-${new Date().getTime()}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, 'Recurring');
+        XLSX.writeFile(wb, `recurring-payments-${new Date().getTime()}.xlsx`);
     };
 
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between gap-4">
                 <Input
-                    placeholder="Search transactions..."
+                    placeholder="Search recurring payments..."
                     value={globalFilter ?? ''}
                     onChange={(e) => setGlobalFilter(e.target.value)}
                     className="max-w-sm"
@@ -287,7 +304,7 @@ export function TransactionsDataTable({ transactions, onDelete }: TransactionsDa
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                                    No transactions found.
+                                    No recurring payments found.
                                 </TableCell>
                             </TableRow>
                         )}

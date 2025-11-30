@@ -8,6 +8,7 @@ export const processRecurringTransactions = async () => {
   
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const todayDayOfWeek = today.getDay(); // 0 (Sunday) to 6 (Saturday)
 
   try {
     const recurringTransactions = await prisma.recurringTransaction.findMany({
@@ -25,26 +26,45 @@ export const processRecurringTransactions = async () => {
         
         // Process all missed occurrences up to today
         while (nextDate <= today) {
-          // Add transaction
-          await prisma.transaction.create({
-            data: {
-              userId: rt.userId,
-              title: rt.title,
-              amount: rt.amount,
-              type: rt.type,
-              category: rt.category,
-              paymentMethod: rt.paymentMethod,
-              date: nextDate, // Use the actual due date
-              notes: 'Auto-generated recurring payment',
-              isRecurring: true,
-            },
-          });
+          // Check if we should create transaction on this day
+          let shouldCreate = true;
+          
+          // If daysOfWeek is specified and not empty, check if today matches
+          if (rt.daysOfWeek && rt.daysOfWeek.length > 0) {
+            const currentDayOfWeek = nextDate.getDay();
+            shouldCreate = rt.daysOfWeek.includes(currentDayOfWeek);
+          }
 
-          // Calculate next due date
-          if (rt.frequency === 'DAILY') nextDate.setDate(nextDate.getDate() + 1);
-          if (rt.frequency === 'WEEKLY') nextDate.setDate(nextDate.getDate() + 7);
-          if (rt.frequency === 'MONTHLY') nextDate.setMonth(nextDate.getMonth() + 1);
-          if (rt.frequency === 'YEARLY') nextDate.setFullYear(nextDate.getFullYear() + 1);
+          // Create transaction only if it matches the day criteria
+          if (shouldCreate) {
+            await prisma.transaction.create({
+              data: {
+                userId: rt.userId,
+                title: rt.title,
+                amount: rt.amount,
+                type: rt.type,
+                category: rt.category,
+                paymentMethod: rt.paymentMethod,
+                date: nextDate,
+                notes: `Auto-generated from recurring: ${rt.frequency}`,
+                isRecurring: true,
+              },
+            });
+            console.log(`Created transaction for ${rt.title} on ${nextDate.toDateString()}`);
+          }
+
+          // Calculate next due date based on frequency
+          const tempDate = new Date(nextDate);
+          if (rt.frequency === 'DAILY') {
+            tempDate.setDate(tempDate.getDate() + 1);
+          } else if (rt.frequency === 'WEEKLY') {
+            tempDate.setDate(tempDate.getDate() + 7);
+          } else if (rt.frequency === 'MONTHLY') {
+            tempDate.setMonth(tempDate.getMonth() + 1);
+          } else if (rt.frequency === 'YEARLY') {
+            tempDate.setFullYear(tempDate.getFullYear() + 1);
+          }
+          nextDate = tempDate;
         }
 
         // Update next due date in DB

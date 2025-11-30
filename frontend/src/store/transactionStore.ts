@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import api from '@/lib/api';
 import { AxiosError } from 'axios';
 
-interface Transaction {
+export interface Transaction {
   id: string;
   title: string;
   amount: number;

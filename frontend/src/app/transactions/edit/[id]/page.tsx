@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter, useParams } from 'next/navigation';
 import { useTransactionStore } from '@/store/transactionStore';
+import type { Transaction } from '@/store/transactionStore';
 import { Button } from '@/components/ui/button';
 import {
     Form,
@@ -23,9 +24,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { PageLayout } from '@/components/layout/PageLayout';
 
 const formSchema = z.object({
     title: z.string().min(2, 'Title is required'),
@@ -70,7 +72,7 @@ export default function EditTransactionPage() {
     const params = useParams();
     const id = params.id as string;
     const { transactions, updateTransaction, isLoading } = useTransactionStore();
-    const [transaction, setTransaction] = useState<any>(null);
+    const [transaction, setTransaction] = useState<Transaction | null>(null);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -135,12 +137,9 @@ export default function EditTransactionPage() {
     }
 
     return (
-        <div className="p-8 flex justify-center bg-gray-50 min-h-screen dark:bg-gray-900">
-            <Card className="w-full max-w-2xl">
-                <CardHeader>
-                    <CardTitle>Edit Transaction</CardTitle>
-                </CardHeader>
-                <CardContent>
+        <PageLayout title="Edit Transaction">
+            <Card className="">
+                <CardContent className="pt-6">
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                             <FormField
@@ -300,6 +299,6 @@ export default function EditTransactionPage() {
                     </Form>
                 </CardContent>
             </Card>
-        </div>
+        </PageLayout>
     );
 }
