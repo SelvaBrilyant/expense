@@ -1,15 +1,27 @@
-import { Request, Response } from 'express';
-import { prisma } from '../lib/prisma';
-import bcrypt from 'bcryptjs';
-import generateToken from '../utils/generateToken';
+import { Request, Response } from "express";
+import { prisma } from "../lib/prisma";
+import bcrypt from "bcryptjs";
+import generateToken from "../utils/generateToken";
 
-import { sendOnboardingEmail, sendPasswordResetOTP } from '../services/emailService';
+import {
+  sendOnboardingEmail,
+  sendPasswordResetOTP,
+} from "../services/emailService";
 
 // @desc    Register a new user
 // @route   POST /api/users
 // @access  Public
 export const registerUser = async (req: Request, res: Response) => {
-  const { name, email, password, profilePicture, coverPicture, dateOfBirth, bio, phoneNumber } = req.body;
+  const {
+    name,
+    email,
+    password,
+    profilePicture,
+    coverPicture,
+    dateOfBirth,
+    bio,
+    phoneNumber,
+  } = req.body;
 
   const userExists = await prisma.user.findUnique({
     where: { email },
@@ -17,7 +29,7 @@ export const registerUser = async (req: Request, res: Response) => {
 
   if (userExists) {
     res.status(400);
-    throw new Error('User already exists');
+    throw new Error("User already exists");
   }
 
   const salt = await bcrypt.genSalt(10);
@@ -38,7 +50,7 @@ export const registerUser = async (req: Request, res: Response) => {
 
   if (user) {
     // Send onboarding email
-    sendOnboardingEmail(user.email, user.name || 'User');
+    sendOnboardingEmail(user.email, user.name || "User");
 
     res.status(201).json({
       _id: user.id,
@@ -53,7 +65,7 @@ export const registerUser = async (req: Request, res: Response) => {
     });
   } else {
     res.status(400);
-    throw new Error('Invalid user data');
+    throw new Error("Invalid user data");
   }
 };
 
@@ -72,11 +84,16 @@ export const authUser = async (req: Request, res: Response) => {
       _id: user.id,
       name: user.name,
       email: user.email,
+      profilePicture: user.profilePicture,
+      coverPicture: user.coverPicture,
+      dateOfBirth: user.dateOfBirth,
+      bio: user.bio,
+      phoneNumber: user.phoneNumber,
       token: generateToken(user.id),
     });
   } else {
     res.status(401);
-    throw new Error('Invalid email or password');
+    throw new Error("Invalid email or password");
   }
 };
 
@@ -105,7 +122,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
     res.json(user);
   } else {
     res.status(404);
-    throw new Error('User not found');
+    throw new Error("User not found");
   }
 };
 
@@ -118,14 +135,25 @@ export const updateUserProfile = async (req: Request, res: Response) => {
   });
 
   if (user) {
-    const { name, email, password, profilePicture, coverPicture, dateOfBirth, bio, phoneNumber } = req.body;
+    const {
+      name,
+      email,
+      password,
+      profilePicture,
+      coverPicture,
+      dateOfBirth,
+      bio,
+      phoneNumber,
+    } = req.body;
 
     // Update fields if provided - use ?? instead of || to allow empty strings
     const updatedData: any = {
       name: name ?? user.name,
       email: email ?? user.email,
-      profilePicture: profilePicture !== undefined ? profilePicture : user.profilePicture,
-      coverPicture: coverPicture !== undefined ? coverPicture : user.coverPicture,
+      profilePicture:
+        profilePicture !== undefined ? profilePicture : user.profilePicture,
+      coverPicture:
+        coverPicture !== undefined ? coverPicture : user.coverPicture,
       bio: bio !== undefined ? bio : user.bio,
       phoneNumber: phoneNumber !== undefined ? phoneNumber : user.phoneNumber,
     };
@@ -163,7 +191,7 @@ export const updateUserProfile = async (req: Request, res: Response) => {
     });
   } else {
     res.status(404);
-    throw new Error('User not found');
+    throw new Error("User not found");
   }
 };
 
@@ -175,7 +203,7 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 
   if (!email) {
     res.status(400);
-    throw new Error('Email is required');
+    throw new Error("Email is required");
   }
 
   const user = await prisma.user.findUnique({
@@ -187,7 +215,7 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
   if (user) {
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    
+
     // Set expiry to 10 minutes from now
     const otpExpiry = new Date();
     otpExpiry.setMinutes(otpExpiry.getMinutes() + 10);
@@ -203,16 +231,16 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 
     // Send OTP via email
     try {
-      await sendPasswordResetOTP(user.email, user.name || 'User', otp);
+      await sendPasswordResetOTP(user.email, user.name || "User", otp);
     } catch (error) {
-      console.error('Failed to send OTP email:', error);
+      console.error("Failed to send OTP email:", error);
       res.status(500);
-      throw new Error('Failed to send OTP email');
+      throw new Error("Failed to send OTP email");
     }
   }
 
   res.json({
-    message: 'If the email exists, an OTP has been sent to your email address',
+    message: "If the email exists, an OTP has been sent to your email address",
   });
 };
 
@@ -224,7 +252,7 @@ export const verifyResetOTP = async (req: Request, res: Response) => {
 
   if (!email || !otp) {
     res.status(400);
-    throw new Error('Email and OTP are required');
+    throw new Error("Email and OTP are required");
   }
 
   const user = await prisma.user.findUnique({
@@ -233,23 +261,23 @@ export const verifyResetOTP = async (req: Request, res: Response) => {
 
   if (!user || !user.resetPasswordOtp || !user.resetPasswordOtpExpiry) {
     res.status(400);
-    throw new Error('Invalid or expired OTP');
+    throw new Error("Invalid or expired OTP");
   }
 
   // Check if OTP matches
   if (user.resetPasswordOtp !== otp) {
     res.status(400);
-    throw new Error('Invalid OTP');
+    throw new Error("Invalid OTP");
   }
 
   // Check if OTP has expired
   if (new Date() > user.resetPasswordOtpExpiry) {
     res.status(400);
-    throw new Error('OTP has expired');
+    throw new Error("OTP has expired");
   }
 
   res.json({
-    message: 'OTP verified successfully',
+    message: "OTP verified successfully",
   });
 };
 
@@ -261,17 +289,17 @@ export const resetPassword = async (req: Request, res: Response) => {
 
   if (!email || !otp || !newPassword || !confirmPassword) {
     res.status(400);
-    throw new Error('All fields are required');
+    throw new Error("All fields are required");
   }
 
   if (newPassword !== confirmPassword) {
     res.status(400);
-    throw new Error('Passwords do not match');
+    throw new Error("Passwords do not match");
   }
 
   if (newPassword.length < 6) {
     res.status(400);
-    throw new Error('Password must be at least 6 characters');
+    throw new Error("Password must be at least 6 characters");
   }
 
   const user = await prisma.user.findUnique({
@@ -280,19 +308,19 @@ export const resetPassword = async (req: Request, res: Response) => {
 
   if (!user || !user.resetPasswordOtp || !user.resetPasswordOtpExpiry) {
     res.status(400);
-    throw new Error('Invalid or expired OTP');
+    throw new Error("Invalid or expired OTP");
   }
 
   // Check if OTP matches
   if (user.resetPasswordOtp !== otp) {
     res.status(400);
-    throw new Error('Invalid OTP');
+    throw new Error("Invalid OTP");
   }
 
   // Check if OTP has expired
   if (new Date() > user.resetPasswordOtpExpiry) {
     res.status(400);
-    throw new Error('OTP has expired');
+    throw new Error("OTP has expired");
   }
 
   // Hash new password
@@ -310,6 +338,6 @@ export const resetPassword = async (req: Request, res: Response) => {
   });
 
   res.json({
-    message: 'Password reset successfully',
+    message: "Password reset successfully",
   });
 };
