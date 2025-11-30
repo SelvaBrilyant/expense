@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ReactMarkdown from 'react-markdown';
 import { Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { PageLayout } from '@/components/layout/PageLayout';
 
 export default function InsightsPage() {
     const [insights, setInsights] = useState<string | null>(null);
@@ -18,19 +19,16 @@ export default function InsightsPage() {
             const { data } = await api.post('/ai/insights');
             setInsights(data.insights);
             toast.success('Insights generated!');
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to generate insights');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to generate insights';
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <div className="p-8 space-y-8 bg-gray-50 min-h-screen dark:bg-gray-900">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold tracking-tight">AI Financial Advisor</h1>
-            </div>
-
+        <PageLayout title="AI Financial Advisor">
             <Card>
                 <CardHeader>
                     <CardTitle>Get Personalized Insights</CardTitle>
@@ -59,6 +57,6 @@ export default function InsightsPage() {
                     </CardContent>
                 </Card>
             )}
-        </div>
+        </PageLayout>
     );
 }

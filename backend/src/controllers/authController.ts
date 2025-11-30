@@ -120,14 +120,14 @@ export const updateUserProfile = async (req: Request, res: Response) => {
   if (user) {
     const { name, email, password, profilePicture, coverPicture, dateOfBirth, bio, phoneNumber } = req.body;
 
-    // Update fields if provided
+    // Update fields if provided - use ?? instead of || to allow empty strings
     const updatedData: any = {
-      name: name || user.name,
-      email: email || user.email,
-      profilePicture: profilePicture || user.profilePicture,
-      coverPicture: coverPicture || user.coverPicture,
-      bio: bio || user.bio,
-      phoneNumber: phoneNumber || user.phoneNumber,
+      name: name ?? user.name,
+      email: email ?? user.email,
+      profilePicture: profilePicture !== undefined ? profilePicture : user.profilePicture,
+      coverPicture: coverPicture !== undefined ? coverPicture : user.coverPicture,
+      bio: bio !== undefined ? bio : user.bio,
+      phoneNumber: phoneNumber !== undefined ? phoneNumber : user.phoneNumber,
     };
 
     if (dateOfBirth) {

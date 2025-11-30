@@ -12,7 +12,6 @@ import {
     Sparkles,
     LogOut,
     Settings,
-    User,
     ChevronLeft,
     ChevronRight,
 } from 'lucide-react';
@@ -24,6 +23,8 @@ export default function Sidebar() {
     const router = useRouter();
     const { user, logout } = useAuthStore();
     const [isCollapsed, setIsCollapsed] = useState(false);
+
+    console.log(user);
 
     const handleLogout = () => {
         logout();
@@ -94,8 +95,18 @@ export default function Sidebar() {
 
             <div className="border-t p-4">
                 <div className={cn("flex items-center gap-3", isCollapsed ? "justify-center" : "")}>
-                    <div className="h-9 w-9 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
-                        <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-md">
+                        {user?.profilePicture ? (
+                            <img
+                                src={user.profilePicture}
+                                alt={user.name || 'User'}
+                                className="h-full w-full object-cover"
+                            />
+                        ) : (
+                            <span className="text-sm font-bold text-white">
+                                {user?.name?.charAt(0).toUpperCase() || 'U'}
+                            </span>
+                        )}
                     </div>
                     {!isCollapsed && (
                         <div className="flex-1 min-w-0">

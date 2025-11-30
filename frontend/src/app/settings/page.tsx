@@ -7,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Camera, Save, Loader2 } from 'lucide-react';
+import { Save, Loader2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
+import { PageLayout } from '@/components/layout/PageLayout';
+import { ImageUpload } from '@/components/image-upload';
 
 function SettingsContent() {
     const { user, updateProfile, isLoading } = useAuthStore();
@@ -83,72 +84,88 @@ function SettingsContent() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-8">
-                        {/* Cover Picture & Profile Picture */}
-                        <div className="relative group">
-                            <div className="h-48 w-full rounded-xl bg-gradient-to-r from-purple-400 to-blue-500 overflow-hidden relative">
-                                {formData.coverPicture ? (
-                                    <img src={formData.coverPicture} alt="Cover" className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-white/50">
-                                        No Cover Photo
+                        {/* Profile Preview Card with Integrated Upload */}
+                        <Card className="border-purple-200 dark:border-purple-800 overflow-hidden">
+                            <div className="relative">
+                                {/* Cover Picture Preview with Upload */}
+                                <div className="h-32 sm:h-40 w-full bg-gradient-to-r from-purple-400 via-purple-500 to-blue-500 relative overflow-hidden group cursor-pointer">
+                                    {formData.coverPicture && (
+                                        <img
+                                            src={formData.coverPicture}
+                                            alt="Cover"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    )}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+
+                                    {/* Cover Upload Overlay */}
+                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center">
+                                        <ImageUpload
+                                            value={formData.coverPicture}
+                                            onChange={(url) => setFormData(prev => ({ ...prev, coverPicture: url }))}
+                                            aspectRatio="wide"
+                                        />
+                                        <p className="text-white text-xs mt-2">Click to upload cover photo</p>
+                                        <p className="text-white/70 text-xs">Recommended: 1200x400</p>
                                     </div>
-                                )}
-                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <Label htmlFor="coverPicture" className="cursor-pointer bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition-colors">
-                                        <Camera className="h-6 w-6" />
-                                    </Label>
-                                    <Input
-                                        id="coverPicture"
-                                        name="coverPicture"
-                                        value={formData.coverPicture}
-                                        onChange={handleChange}
-                                        className="hidden"
-                                        placeholder="Enter Image URL"
-                                    />
-                                    {/* For a real app, this would be a file upload. Using URL input for simplicity as per current structure */}
+                                </div>
+
+                                {/* Profile Picture Preview with Upload */}
+                                <div className="absolute -bottom-12 left-6 sm:left-8">
+                                    <div className="relative group cursor-pointer">
+                                        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white dark:border-gray-950 shadow-xl bg-purple-100 dark:bg-purple-900 overflow-hidden">
+                                            {formData.profilePicture ? (
+                                                <img
+                                                    src={formData.profilePicture}
+                                                    alt="Profile"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-purple-600 dark:text-purple-300 text-3xl font-bold">
+                                                    {formData.name?.charAt(0).toUpperCase() || '?'}
+                                                </div>
+                                            )}
+
+                                            {/* Profile Upload Overlay */}
+                                            <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <ImageUpload
+                                                        value={formData.profilePicture}
+                                                        onChange={(url) => setFormData(prev => ({ ...prev, profilePicture: url }))}
+                                                        aspectRatio="square"
+                                                        imageClassName="rounded-full"
+                                                        className='rounded-full'
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-green-500 rounded-full border-2 border-white dark:border-gray-950" />
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="absolute -bottom-12 left-8">
-                                <div className="relative group/avatar">
-                                    <Avatar className="h-24 w-24 border-4 border-white dark:border-gray-950 shadow-lg">
-                                        <AvatarImage src={formData.profilePicture} />
-                                        <AvatarFallback className="bg-purple-100 text-purple-600 text-2xl">
-                                            {formData.name?.charAt(0).toUpperCase() || <User />}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center">
-                                        <Label htmlFor="profilePicture" className="cursor-pointer text-white">
-                                            <Camera className="h-5 w-5" />
-                                        </Label>
+                            {/* Name Preview */}
+                            <CardContent className="pt-16 pb-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                                            {formData.name || 'Your Name'}
+                                        </h3>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                                            {formData.email}
+                                        </p>
+                                    </div>
+                                    <div className="mt-3 sm:mt-0">
+                                        <div className="text-xs text-purple-600 dark:text-purple-400 font-medium bg-purple-100 dark:bg-purple-900/30 px-3 py-1 rounded-full inline-block">
+                                            Profile Preview
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* URL Inputs for Images (Temporary UI for URL entry since we don't have file upload logic yet) */}
-                        <div className="grid gap-4 pt-10 md:grid-cols-2">
-                            <div className="space-y-2">
-                                <Label htmlFor="profilePictureInput">Profile Picture URL</Label>
-                                <Input
-                                    id="profilePictureInput"
-                                    name="profilePicture"
-                                    value={formData.profilePicture}
-                                    onChange={handleChange}
-                                    placeholder="https://example.com/avatar.jpg"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="coverPictureInput">Cover Picture URL</Label>
-                                <Input
-                                    id="coverPictureInput"
-                                    name="coverPicture"
-                                    value={formData.coverPicture}
-                                    onChange={handleChange}
-                                    placeholder="https://example.com/cover.jpg"
-                                />
-                            </div>
-                        </div>
+                                <div className="mt-3 text-xs text-muted-foreground">
+                                    💡 Hover over the cover or profile picture to upload new photos
+                                </div>
+                            </CardContent>
+                        </Card>
 
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
@@ -232,15 +249,11 @@ export default function SettingsPage() {
     const { user } = useAuthStore();
 
     return (
-        <div className="p-8 space-y-8 bg-gray-50 min-h-screen dark:bg-gray-900">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Settings</h1>
-                <p className="text-muted-foreground">
-                    Manage your account settings and preferences.
-                </p>
-            </div>
-
+        <PageLayout
+            title="Settings"
+            description="Manage your account settings and preferences."
+        >
             <SettingsContent key={user?._id || 'loading'} />
-        </div>
+        </PageLayout>
     );
 }

@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PageLayout } from '@/components/layout/PageLayout';
 
 export default function RecurringPage() {
     const { recurring, fetchRecurring, addRecurring, deleteRecurring, isLoading } =
@@ -59,9 +60,9 @@ export default function RecurringPage() {
     };
 
     return (
-        <div className="p-8 space-y-8 bg-gray-50 min-h-screen dark:bg-gray-900">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold tracking-tight">Recurring Payments</h1>
+        <PageLayout
+            title="Recurring Payments"
+            action={
                 <Dialog open={isOpen} onOpenChange={setIsOpen}>
                     <DialogTrigger asChild>
                         <Button>
@@ -129,8 +130,8 @@ export default function RecurringPage() {
                         </div>
                     </DialogContent>
                 </Dialog>
-            </div>
-
+            }
+        >
             <div className="grid gap-4 md:grid-cols-3">
                 {isLoading ? (
                     <p>Loading...</p>
@@ -159,6 +160,6 @@ export default function RecurringPage() {
                     ))
                 )}
             </div>
-        </div>
+        </PageLayout>
     );
 }

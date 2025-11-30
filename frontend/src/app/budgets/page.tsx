@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PageLayout } from '@/components/layout/PageLayout';
 
 const CATEGORIES = [
     'Food',
@@ -71,9 +72,9 @@ export default function BudgetsPage() {
     };
 
     return (
-        <div className="p-8 space-y-8 bg-gray-50 min-h-screen dark:bg-gray-900">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold tracking-tight">Budgets</h1>
+        <PageLayout
+            title="Budgets"
+            action={
                 <Dialog open={isOpen} onOpenChange={setIsOpen}>
                     <DialogTrigger asChild>
                         <Button>
@@ -122,8 +123,8 @@ export default function BudgetsPage() {
                         </div>
                     </DialogContent>
                 </Dialog>
-            </div>
-
+            }
+        >
             <div className="grid gap-4 md:grid-cols-3">
                 {isLoading ? (
                     <p>Loading budgets...</p>
@@ -154,6 +155,6 @@ export default function BudgetsPage() {
                     ))
                 )}
             </div>
-        </div>
+        </PageLayout>
     );
 }
