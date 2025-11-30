@@ -1,6 +1,8 @@
 import express from 'express';
 import {
   getInsights,
+  chatWithAdvisor,
+  getWeeklyReport,
   analyzeSpendingPatterns,
   detectOverspending,
   getCategoryAdvice,
@@ -27,6 +29,28 @@ const router = express.Router();
  *       - bearerAuth: []
  */
 router.post('/insights', protect, getInsights);
+
+/**
+ * @swagger
+ * /api/ai/chat:
+ *   post:
+ *     summary: Chat with AI advisor
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post('/chat', protect, chatWithAdvisor);
+
+/**
+ * @swagger
+ * /api/ai/weekly-report:
+ *   get:
+ *     summary: Get weekly financial report
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get('/weekly-report', protect, getWeeklyReport);
 
 /**
  * @swagger

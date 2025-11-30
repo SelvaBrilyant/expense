@@ -36,6 +36,73 @@ export const getInsights = async (req: Request, res: Response) => {
   }
 };
 
+// @desc    Chat with AI Advisor
+// @route   POST /api/ai/chat
+// @access  Private
+export const chatWithAdvisor = async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { message, context } = req.body;
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const transactions = await prisma.transaction.findMany({
+      where: { userId },
+      orderBy: { date: 'desc' },
+      take: 50,
+    });
+
+    const budgets = await prisma.budget.findMany({
+      where: { userId },
+    });
+
+    const response = await aiService.chatWithAdvisor(message, {
+      user,
+      transactions,
+      budgets,
+      context,
+    });
+
+    res.json({ response });
+  } catch (error) {
+    console.error(error);
+    res.status(500);
+    throw new Error('Chat Failed');
+  }
+};
+
+// @desc    Get weekly report
+// @route   GET /api/ai/weekly-report
+// @access  Private
+export const getWeeklyReport = async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        userId,
+        date: { gte: weekAgo },
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    const budgets = await prisma.budget.findMany({
+      where: { userId },
+    });
+
+    const report = await aiService.getWeeklyReport(user, transactions, budgets);
+    res.json({ report });
+  } catch (error) {
+    console.error(error);
+    res.status(500);
+    throw new Error('Weekly Report Failed');
+  }
+};
+
 // @desc    Analyze spending patterns
 // @route   GET /api/ai/patterns
 // @access  Private
@@ -86,7 +153,7 @@ export const detectOverspending = async (req: Request, res: Response) => {
 // @desc    Get category-specific advice
 // @route   GET /api/ai/category/:category
 // @access  Private
-export const getCategoryAdvice = async (req: Request, res: Response) => {
+export const getCategoryAdvice = async (req: Request,res: Response) => {
   const userId = (req as any).user.id;
   const { category } = req.params;
 

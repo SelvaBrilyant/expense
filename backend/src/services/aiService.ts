@@ -1,24 +1,157 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { SYSTEM_PROMPT, generateUserPrompt } from '../utils/aiPrompts';
+import { GoogleGenAI } from "@google/genai";
+import { SYSTEM_PROMPT, generateUserPrompt } from "../utils/aiPrompts";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export class AIService {
-  private model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-
   async generateInsights(user: any, transactions: any[]) {
     try {
       const prompt = this.buildInsightsPrompt(user, transactions);
-      
-      const result = await this.model.generateContent(prompt);
-      const response = result.response;
-      const text = response.text();
 
-      return text;
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+
+      return response.text;
     } catch (error) {
-      console.error('AI Service Error:', error);
+      console.error("AI Service Error:", error);
       // Fallback to mock insights if API fails
       return this.getMockInsights(user, transactions);
+    }
+  }
+
+  async chatWithAdvisor(message: string, context: any) {
+    try {
+      const { user, transactions, budgets } = context;
+
+      const contextData = {
+        totalExpenses: transactions
+          .filter((t: any) => t.type === "EXPENSE")
+          .reduce((acc: number, t: any) => acc + t.amount, 0),
+        totalIncome: transactions
+          .filter((t: any) => t.type === "INCOME")
+          .reduce((acc: number, t: any) => acc + t.amount, 0),
+        topCategory: this.getTopCategory(transactions),
+        budgetCount: budgets?.length || 0,
+        transactionCount: transactions.length,
+      };
+
+      const prompt = `You are a helpful financial advisor AI assistant. The user has asked: "${message}"
+
+Context about the user's finances:
+- Currency: ${user.currency}
+- Total Expenses: ${user.currency} ${contextData.totalExpenses.toFixed(2)}
+- Total Income: ${user.currency} ${contextData.totalIncome.toFixed(2)}
+- Top Spending Category: ${contextData.topCategory}
+- Active Budgets: ${contextData.budgetCount}
+- Recent Transactions: ${contextData.transactionCount}
+
+Recent transaction samples:
+${JSON.stringify(transactions.slice(0, 10), null, 2)}
+
+Provide a helpful, friendly, and actionable response. Use emojis and markdown formatting. Be specific and reference their actual data when possible.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+
+      return response.text;
+    } catch (error) {
+      console.error("AI Chat Error:", error);
+      return "I'm having trouble connecting right now. Please try again in a moment! 🔄";
+    }
+  }
+
+  async getWeeklyReport(user: any, transactions: any[], budgets: any[]) {
+    try {
+      const expenses = transactions.filter((t) => t.type === "EXPENSE");
+      const income = transactions.filter((t) => t.type === "INCOME");
+
+      const totalExpenses = expenses.reduce((acc, t) => acc + t.amount, 0);
+      const totalIncome = income.reduce((acc, t) => acc + t.amount, 0);
+      const categoryBreakdown = this.getCategoryBreakdown(transactions);
+
+      const prompt = `Generate a comprehensive weekly financial report:
+
+User: ${user.name || "User"}
+Currency: ${user.currency}
+Period: Last 7 Days
+
+Summary:
+- Total Income: ${user.currency} ${totalIncome.toFixed(2)}
+- Total Expenses: ${user.currency} ${totalExpenses.toFixed(2)}
+- Net Savings: ${user.currency} ${(totalIncome - totalExpenses).toFixed(2)}
+- Transaction Count: ${transactions.length}
+
+Category Breakdown:
+${JSON.stringify(categoryBreakdown, null, 2)}
+
+Budgets:
+${JSON.stringify(budgets, null, 2)}
+
+Recent Transactions:
+${JSON.stringify(transactions.slice(0, 20), null, 2)}
+
+Provide a detailed weekly report with:
+1. 📊 **Weekly Summary** - Key highlights and metrics
+2. 💰 **Income vs Expenses** - Analysis of cash flow
+3. 📈 **Top Categories** - Where money was spent
+4. ⚠️ **Budget Alerts** - Any budget concerns
+5. 🎯 **Action Items** - Specific recommendations for next week
+6. 🏆 **Wins** - Positive financial behaviors to celebrate
+
+Use markdown, emojis, and be encouraging. Format as a professional report.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+
+      return response.text;
+    } catch (error) {
+      console.error("Weekly Report Error:", error);
+      return "📊 Unable to generate weekly report at this time.";
+    }
+  }
+
+  async predictFutureSpending(user: any, transactions: any[]) {
+    try {
+      const monthlyData = this.getMonthlyAverages(transactions);
+      const categoryTrends = this.getCategoryTrends(transactions);
+
+      const prompt = `Analyze spending patterns and predict next month's expenses:
+
+User Currency: ${user.currency}
+
+Monthly Averages (last 3 months):
+${JSON.stringify(monthlyData, null, 2)}
+
+Category Trends:
+${JSON.stringify(categoryTrends, null, 2)}
+
+Transaction History:
+${JSON.stringify(transactions.slice(0, 50), null, 2)}
+
+Provide:
+1. 🔮 **Next Month Forecast** - Predicted total spending
+2. 📊 **Category-wise Predictions** - Expected spending per category
+3. 📈 **Trend Analysis** - Increasing/decreasing patterns
+4. ⚠️ **Potential Overspending** - Categories to watch
+5. 💡 **Recommendations** - How to optimize next month's budget
+
+Use data-driven insights and provide specific numbers. Format in markdown with charts/tables if helpful.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+
+      return response.text;
+    } catch (error) {
+      console.error("Forecast Error:", error);
+      return "🔮 Unable to generate forecast at this time.";
     }
   }
 
@@ -39,21 +172,29 @@ Please provide:
 
 Format your response in markdown.`;
 
-      const result = await this.model.generateContent(prompt);
-      return result.response.text();
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+
+      return response.text;
     } catch (error) {
-      console.error('AI Spending Analysis Error:', error);
-      return 'Unable to analyze spending patterns at this time.';
+      console.error("AI Spending Analysis Error:", error);
+      return "Unable to analyze spending patterns at this time.";
     }
   }
 
   async detectOverspending(transactions: any[], budgets: any[], user: any) {
     try {
       const currentMonthExpenses = this.getCurrentMonthExpenses(transactions);
-      
+
       const prompt = `Analyze overspending based on:
       
-Current Month Expenses by Category: ${JSON.stringify(currentMonthExpenses, null, 2)}
+Current Month Expenses by Category: ${JSON.stringify(
+        currentMonthExpenses,
+        null,
+        2
+      )}
 Budgets: ${JSON.stringify(budgets, null, 2)}
 Currency: ${user.currency}
 
@@ -65,21 +206,28 @@ Identify:
 
 Format your response in markdown with alerts and actionable items.`;
 
-      const result = await this.model.generateContent(prompt);
-      return result.response.text();
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+
+      return response.text;
     } catch (error) {
-      console.error('AI Overspending Detection Error:', error);
-      return 'Unable to detect overspending at this time.';
+      console.error("AI Overspending Detection Error:", error);
+      return "Unable to detect overspending at this time.";
     }
   }
 
   async getCategoryAdvice(category: string, transactions: any[], user: any) {
     try {
       const categoryTransactions = transactions.filter(
-        (t) => t.category === category && t.type === 'EXPENSE'
+        (t) => t.category === category && t.type === "EXPENSE"
       );
 
-      const totalSpent = categoryTransactions.reduce((acc, t) => acc + t.amount, 0);
+      const totalSpent = categoryTransactions.reduce(
+        (acc, t) => acc + t.amount,
+        0
+      );
       const avgPerTransaction = totalSpent / categoryTransactions.length || 0;
 
       const prompt = `Provide financial advice for the category "${category}":
@@ -87,7 +235,11 @@ Format your response in markdown with alerts and actionable items.`;
 Total Spent: ${user.currency} ${totalSpent.toFixed(2)}
 Number of Transactions: ${categoryTransactions.length}
 Average per Transaction: ${user.currency} ${avgPerTransaction.toFixed(2)}
-Recent Transactions: ${JSON.stringify(categoryTransactions.slice(0, 10), null, 2)}
+Recent Transactions: ${JSON.stringify(
+        categoryTransactions.slice(0, 10),
+        null,
+        2
+      )}
 
 Provide:
 1. Is this spending reasonable?
@@ -98,10 +250,14 @@ Provide:
 
 Format in markdown with emojis and actionable tips.`;
 
-      const result = await this.model.generateContent(prompt);
-      return result.response.text();
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+
+      return response.text;
     } catch (error) {
-      console.error('AI Category Advice Error:', error);
+      console.error("AI Category Advice Error:", error);
       return `Unable to provide advice for ${category} at this time.`;
     }
   }
@@ -109,19 +265,21 @@ Format in markdown with emojis and actionable tips.`;
   async getPersonalizedRecommendations(user: any, recentTransactions: any[]) {
     try {
       const totalIncome = recentTransactions
-        .filter((t) => t.type === 'INCOME')
+        .filter((t) => t.type === "INCOME")
         .reduce((acc, t) => acc + t.amount, 0);
       const totalExpense = recentTransactions
-        .filter((t) => t.type === 'EXPENSE')
+        .filter((t) => t.type === "EXPENSE")
         .reduce((acc, t) => acc + t.amount, 0);
 
       const prompt = `As a financial advisor, provide personalized recommendations:
 
-User Name: ${user.name || 'User'}
+User Name: ${user.name || "User"}
 Currency: ${user.currency}
 Recent Income: ${user.currency} ${totalIncome.toFixed(2)}
 Recent Expenses: ${user.currency} ${totalExpense.toFixed(2)}
-Savings Rate: ${(((totalIncome - totalExpense) / totalIncome) * 100).toFixed(1)}%
+Savings Rate: ${(((totalIncome - totalExpense) / totalIncome) * 100).toFixed(
+        1
+      )}%
 
 Recent Transactions: ${JSON.stringify(recentTransactions.slice(0, 20), null, 2)}
 
@@ -134,17 +292,21 @@ Provide:
 
 Use encouraging tone, emojis, and format in markdown.`;
 
-      const result = await this.model.generateContent(prompt);
-      return result.response.text();
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+
+      return response.text;
     } catch (error) {
-      console.error('AI Recommendations Error:', error);
-      return 'Unable to generate personalized recommendations at this time.';
+      console.error("AI Recommendations Error:", error);
+      return "Unable to generate personalized recommendations at this time.";
     }
   }
 
   private buildInsightsPrompt(user: any, transactions: any[]): string {
     const totalExpense = transactions
-      .filter((t) => t.type === 'EXPENSE')
+      .filter((t) => t.type === "EXPENSE")
       .reduce((acc, t) => acc + t.amount, 0);
 
     const topCategory = this.getTopCategory(transactions);
@@ -175,7 +337,7 @@ Format your response in markdown with emojis. Be friendly and encouraging.`;
 
   private getMockInsights(user: any, transactions: any[]): string {
     const totalExpense = transactions
-      .filter((t) => t.type === 'EXPENSE')
+      .filter((t) => t.type === "EXPENSE")
       .reduce((acc, t) => acc + t.amount, 0);
 
     const topCategory = this.getTopCategory(transactions);
@@ -210,20 +372,20 @@ Your highest spending category is **${topCategory}**.
   private getTopCategory(transactions: any[]): string {
     const categories: any = {};
     transactions.forEach((t) => {
-      if (t.type === 'EXPENSE') {
+      if (t.type === "EXPENSE") {
         categories[t.category] = (categories[t.category] || 0) + t.amount;
       }
     });
     return Object.keys(categories).reduce(
       (a, b) => (categories[a] > categories[b] ? a : b),
-      'None'
+      "None"
     );
   }
 
   private getCategoryBreakdown(transactions: any[]) {
     const categories: any = {};
     transactions.forEach((t) => {
-      if (t.type === 'EXPENSE') {
+      if (t.type === "EXPENSE") {
         if (!categories[t.category]) {
           categories[t.category] = { total: 0, count: 0 };
         }
@@ -244,18 +406,42 @@ Your highest spending category is **${topCategory}**.
       .filter((t) => {
         const tDate = new Date(t.date);
         return (
-          t.type === 'EXPENSE' &&
+          t.type === "EXPENSE" &&
           tDate.getMonth() === currentMonth &&
           tDate.getFullYear() === currentYear
         );
       })
       .forEach((t) => {
-        monthlyExpenses[t.category] = (monthlyExpenses[t.category] || 0) + t.amount;
+        monthlyExpenses[t.category] =
+          (monthlyExpenses[t.category] || 0) + t.amount;
       });
 
     return monthlyExpenses;
   }
+
+  private getMonthlyAverages(transactions: any[]) {
+    const months: any = {};
+    transactions.forEach((t) => {
+      if (t.type === "EXPENSE") {
+        const date = new Date(t.date);
+        const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+        if (!months[monthKey]) months[monthKey] = 0;
+        months[monthKey] += t.amount;
+      }
+    });
+    return months;
+  }
+
+  private getCategoryTrends(transactions: any[]) {
+    const trends: any = {};
+    transactions.forEach((t) => {
+      if (t.type === "EXPENSE") {
+        if (!trends[t.category]) trends[t.category] = [];
+        trends[t.category].push({ date: t.date, amount: t.amount });
+      }
+    });
+    return trends;
+  }
 }
 
 export const aiService = new AIService();
-
