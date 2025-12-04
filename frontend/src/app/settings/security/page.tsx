@@ -6,7 +6,6 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -29,26 +28,27 @@ import {
     XCircle,
     Clock,
     MapPin,
-    AlertTriangle,
+    ArrowLeft,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
 
 // Event type display configuration
-const eventTypeConfig: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
-    LOGIN_SUCCESS: { label: 'Login', color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
-    LOGIN_FAILED: { label: 'Failed Login', color: 'bg-red-100 text-red-800', icon: XCircle },
-    LOGOUT: { label: 'Logout', color: 'bg-gray-100 text-gray-800', icon: LogOut },
-    PASSWORD_CHANGE: { label: 'Password Changed', color: 'bg-blue-100 text-blue-800', icon: Shield },
-    PASSWORD_RESET_REQUEST: { label: 'Password Reset Request', color: 'bg-yellow-100 text-yellow-800', icon: AlertTriangle },
-    PASSWORD_RESET_SUCCESS: { label: 'Password Reset', color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
-    ACCOUNT_LOCKED: { label: 'Account Locked', color: 'bg-red-100 text-red-800', icon: AlertTriangle },
-    ACCOUNT_UNLOCKED: { label: 'Account Unlocked', color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
-    TOKEN_REFRESH: { label: 'Token Refresh', color: 'bg-gray-100 text-gray-800', icon: RefreshCw },
-    TOKEN_REVOKED: { label: 'Session Revoked', color: 'bg-orange-100 text-orange-800', icon: XCircle },
-    ACCOUNT_DELETED: { label: 'Account Deleted', color: 'bg-red-100 text-red-800', icon: XCircle },
-    ACCOUNT_REACTIVATED: { label: 'Account Reactivated', color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
-    PROFILE_UPDATED: { label: 'Profile Updated', color: 'bg-blue-100 text-blue-800', icon: CheckCircle2 },
+const eventTypeConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+    LOGIN_SUCCESS: { label: 'Login', variant: 'default' },
+    LOGIN_FAILED: { label: 'Failed Login', variant: 'destructive' },
+    LOGOUT: { label: 'Logout', variant: 'secondary' },
+    PASSWORD_CHANGE: { label: 'Password Changed', variant: 'default' },
+    PASSWORD_RESET_REQUEST: { label: 'Password Reset Request', variant: 'outline' },
+    PASSWORD_RESET_SUCCESS: { label: 'Password Reset', variant: 'default' },
+    ACCOUNT_LOCKED: { label: 'Account Locked', variant: 'destructive' },
+    ACCOUNT_UNLOCKED: { label: 'Account Unlocked', variant: 'default' },
+    TOKEN_REFRESH: { label: 'Token Refresh', variant: 'secondary' },
+    TOKEN_REVOKED: { label: 'Session Revoked', variant: 'destructive' },
+    ACCOUNT_DELETED: { label: 'Account Deleted', variant: 'destructive' },
+    ACCOUNT_REACTIVATED: { label: 'Account Reactivated', variant: 'default' },
+    PROFILE_UPDATED: { label: 'Profile Updated', variant: 'default' },
 };
 
 // Parse user agent to get device info
@@ -79,6 +79,7 @@ const parseUserAgent = (userAgent: string): { device: string; browser: string; i
 export default function SecurityPage() {
     const { sessions, securityLogs, fetchSessions, fetchSecurityLogs, revokeSession, logoutAllDevices } = useAuthStore();
     const [revoking, setRevoking] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'sessions' | 'logs'>('sessions');
 
     useEffect(() => {
         fetchSessions();
@@ -109,42 +110,59 @@ export default function SecurityPage() {
     return (
         <PageLayout
             title="Security"
-            description="Manage your account security, active sessions, and view security activity"
+            description="Manage sessions and view activity"
+            action={
+                <Link href="/settings">
+                    <Button variant="outline" size="sm">
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Back to Settings
+                    </Button>
+                </Link>
+            }
         >
-            <Tabs defaultValue="sessions" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
-                    <TabsTrigger value="sessions" className="gap-2">
-                        <Smartphone className="h-4 w-4" />
-                        Active Sessions
-                    </TabsTrigger>
-                    <TabsTrigger value="logs" className="gap-2">
-                        <Shield className="h-4 w-4" />
-                        Security Logs
-                    </TabsTrigger>
-                </TabsList>
+            <div className="space-y-6">
+                {/* Simple Tab Buttons */}
+                <div className="flex gap-2">
+                    <Button
+                        variant={activeTab === 'sessions' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setActiveTab('sessions')}
+                    >
+                        <Smartphone className="h-4 w-4 mr-2" />
+                        Sessions
+                    </Button>
+                    <Button
+                        variant={activeTab === 'logs' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setActiveTab('logs')}
+                    >
+                        <Shield className="h-4 w-4 mr-2" />
+                        Activity
+                    </Button>
+                </div>
 
-                {/* Active Sessions Tab */}
-                <TabsContent value="sessions" className="space-y-4">
+                {/* Sessions Tab */}
+                {activeTab === 'sessions' && (
                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
+                        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4">
                             <div>
-                                <CardTitle>Active Sessions</CardTitle>
+                                <CardTitle className="text-lg">Active Sessions</CardTitle>
                                 <CardDescription>
-                                    Devices that are currently logged into your account
+                                    Devices logged into your account
                                 </CardDescription>
                             </div>
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="destructive" size="sm">
                                         <LogOut className="mr-2 h-4 w-4" />
-                                        Logout All Devices
+                                        Logout All
                                     </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Logout from all devices?</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            This will log you out from all devices including this one. You will need to login again.
+                                            This will log you out from all devices including this one.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -159,41 +177,41 @@ export default function SecurityPage() {
                         <CardContent>
                             {sessions.length === 0 ? (
                                 <div className="text-center py-8 text-muted-foreground">
-                                    <Smartphone className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                    <p>No active sessions found</p>
+                                    <Smartphone className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                                    <p className="text-sm">No active sessions</p>
                                 </div>
                             ) : (
-                                <div className="space-y-4">
-                                    {sessions.map((session) => {
+                                <div className="space-y-3">
+                                    {sessions.map((session, index) => {
                                         const { device, browser, icon: DeviceIcon } = parseUserAgent(session.userAgent || '');
-                                        const isCurrentSession = session.id === sessions[0]?.id; // Assuming first is current
+                                        const isCurrentSession = index === 0;
 
                                         return (
                                             <div
                                                 key={session.id}
-                                                className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                                                className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
                                             >
-                                                <div className="flex items-center gap-4">
-                                                    <div className="p-3 bg-primary/10 rounded-full">
-                                                        <DeviceIcon className="h-5 w-5 text-primary" />
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 bg-muted rounded-lg">
+                                                        <DeviceIcon className="h-4 w-4 text-muted-foreground" />
                                                     </div>
                                                     <div>
                                                         <div className="flex items-center gap-2">
-                                                            <p className="font-medium">{device} • {browser}</p>
+                                                            <p className="text-sm font-medium">{device} • {browser}</p>
                                                             {isCurrentSession && (
                                                                 <Badge variant="secondary" className="text-xs">
                                                                     Current
                                                                 </Badge>
                                                             )}
                                                         </div>
-                                                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                                                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                                                             <span className="flex items-center gap-1">
                                                                 <MapPin className="h-3 w-3" />
-                                                                {session.ipAddress || 'Unknown IP'}
+                                                                {session.ipAddress || 'Unknown'}
                                                             </span>
                                                             <span className="flex items-center gap-1">
                                                                 <Clock className="h-3 w-3" />
-                                                                Active {formatDistanceToNow(new Date(session.createdAt))} ago
+                                                                {formatDistanceToNow(new Date(session.createdAt))} ago
                                                             </span>
                                                         </div>
                                                     </div>
@@ -204,13 +222,13 @@ export default function SecurityPage() {
                                                         size="sm"
                                                         onClick={() => handleRevokeSession(session.id)}
                                                         disabled={revoking === session.id}
+                                                        className="text-muted-foreground hover:text-destructive"
                                                     >
                                                         {revoking === session.id ? (
                                                             <RefreshCw className="h-4 w-4 animate-spin" />
                                                         ) : (
                                                             <XCircle className="h-4 w-4" />
                                                         )}
-                                                        <span className="ml-2">Revoke</span>
                                                     </Button>
                                                 )}
                                             </div>
@@ -220,16 +238,16 @@ export default function SecurityPage() {
                             )}
                         </CardContent>
                     </Card>
-                </TabsContent>
+                )}
 
                 {/* Security Logs Tab */}
-                <TabsContent value="logs" className="space-y-4">
+                {activeTab === 'logs' && (
                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
+                        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4">
                             <div>
-                                <CardTitle>Security Activity</CardTitle>
+                                <CardTitle className="text-lg">Security Activity</CardTitle>
                                 <CardDescription>
-                                    Recent security events on your account
+                                    Recent events on your account
                                 </CardDescription>
                             </div>
                             <Button variant="outline" size="sm" onClick={() => fetchSecurityLogs()}>
@@ -240,50 +258,49 @@ export default function SecurityPage() {
                         <CardContent>
                             {securityLogs.length === 0 ? (
                                 <div className="text-center py-8 text-muted-foreground">
-                                    <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                    <p>No security events found</p>
+                                    <Shield className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                                    <p className="text-sm">No activity found</p>
                                 </div>
                             ) : (
-                                <div className="space-y-3">
+                                <div className="space-y-2">
                                     {securityLogs.map((log) => {
                                         const config = eventTypeConfig[log.eventType] || {
                                             label: log.eventType,
-                                            color: 'bg-gray-100 text-gray-800',
-                                            icon: Shield,
+                                            variant: 'secondary' as const,
                                         };
-                                        const EventIcon = config.icon;
 
                                         return (
                                             <div
                                                 key={log.id}
-                                                className="flex items-start gap-4 p-3 border rounded-lg"
+                                                className="flex items-center justify-between p-3 rounded-lg border bg-card"
                                             >
-                                                <div className={`p-2 rounded-full ${log.success ? 'bg-green-100' : 'bg-red-100'}`}>
-                                                    <EventIcon className={`h-4 w-4 ${log.success ? 'text-green-600' : 'text-red-600'}`} />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <Badge className={config.color} variant="secondary">
-                                                            {config.label}
-                                                        </Badge>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {formatDistanceToNow(new Date(log.createdAt))} ago
-                                                        </span>
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`p-1.5 rounded-full ${log.success ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                                                        {log.success ? (
+                                                            <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                                                        ) : (
+                                                            <XCircle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                                                        )}
                                                     </div>
-                                                    {log.details && (
-                                                        <p className="text-sm text-muted-foreground mt-1 truncate">
-                                                            {log.details}
-                                                        </p>
-                                                    )}
-                                                    <p className="text-xs text-muted-foreground mt-1">
-                                                        IP: {log.ipAddress || 'Unknown'}
-                                                    </p>
+                                                    <div>
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <Badge variant={config.variant} className="text-xs">
+                                                                {config.label}
+                                                            </Badge>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {formatDistanceToNow(new Date(log.createdAt))} ago
+                                                            </span>
+                                                        </div>
+                                                        {log.details && (
+                                                            <p className="text-xs text-muted-foreground mt-0.5 max-w-xs truncate">
+                                                                {log.details}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                {!log.success && (
-                                                    <Badge variant="destructive" className="shrink-0">
-                                                        Failed
-                                                    </Badge>
-                                                )}
+                                                <span className="text-xs text-muted-foreground hidden sm:block">
+                                                    {log.ipAddress || 'Unknown IP'}
+                                                </span>
                                             </div>
                                         );
                                     })}
@@ -291,8 +308,8 @@ export default function SecurityPage() {
                             )}
                         </CardContent>
                     </Card>
-                </TabsContent>
-            </Tabs>
+                )}
+            </div>
         </PageLayout>
     );
 }

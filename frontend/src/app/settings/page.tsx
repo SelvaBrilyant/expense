@@ -360,83 +360,92 @@ function SettingsContent() {
                     </Card>
 
                     {/* Security Settings */}
-                    <Card className="border-gray-200 dark:border-gray-800 shadow-sm h-full">
+                    <Card className="border-gray-200 dark:border-gray-800 shadow-sm">
                         <CardHeader>
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2">
                                 <Shield className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                                <CardTitle>Security & Account</CardTitle>
+                                <CardTitle>Security</CardTitle>
                             </div>
-                            <CardDescription>
-                                Update your password and secure your account.
-                            </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            {/* Security Dashboard Link */}
-                            <Link href="/settings/security">
-                                <div className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group">
+
+                        <CardContent className="space-y-8">
+                            {/* Security Dashboard */}
+                            <Link href="/settings/security" className="block group">
+                                <div className="p-5 rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border border-purple-100 dark:border-purple-800/50">
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-full">
-                                                <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 rounded-xl bg-white dark:bg-gray-900 shadow-sm">
+                                                <Shield className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                                             </div>
                                             <div>
-                                                <p className="font-medium">Security Dashboard</p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    View active sessions & security logs
+                                                <p className="font-semibold text-gray-900 dark:text-white">Security Dashboard</p>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                                                    Manage sessions & view activity
                                                 </p>
                                             </div>
                                         </div>
-                                        <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                                        <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
                                     </div>
                                 </div>
                             </Link>
 
-                            <div className="border-t pt-4">
-                                <h4 className="text-sm font-medium mb-3">Change Password</h4>
-                                <div className="space-y-2">
-                                    <Label htmlFor="current-password">Current Password</Label>
-                                    <Input id="current-password" type="password" placeholder="••••••••" />
+                            {/* Password Section */}
+                            <div>
+                                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Update Password</h4>
+                                <div className="space-y-4">
+                                    <div>
+                                        <Label htmlFor="current-password" className="text-sm text-gray-600 dark:text-gray-400">Current</Label>
+                                        <Input id="current-password" type="password" placeholder="Enter current password" className="mt-1.5" />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="new-password" className="text-sm text-gray-600 dark:text-gray-400">New</Label>
+                                        <Input
+                                            id="new-password"
+                                            type="password"
+                                            placeholder="Enter new password"
+                                            className="mt-1.5"
+                                            value={newPassword}
+                                            onChange={(e) => setNewPassword(e.target.value)}
+                                        />
+                                        {newPassword && (
+                                            <div className="mt-2">
+                                                <PasswordStrengthIndicator
+                                                    password={newPassword}
+                                                    onChange={(isValid) => setIsPasswordValid(isValid)}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="confirm-password" className="text-sm text-gray-600 dark:text-gray-400">Confirm</Label>
+                                        <Input id="confirm-password" type="password" placeholder="Confirm new password" className="mt-1.5" />
+                                    </div>
                                 </div>
-                                <div className="space-y-2 mt-3">
-                                    <Label htmlFor="new-password">New Password</Label>
-                                    <Input
-                                        id="new-password"
-                                        type="password"
-                                        placeholder="••••••••"
-                                        value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
-                                    />
-                                    <PasswordStrengthIndicator
-                                        password={newPassword}
-                                        onChange={(isValid) => setIsPasswordValid(isValid)}
-                                    />
-                                </div>
-                                <div className="space-y-2 mt-3">
-                                    <Label htmlFor="confirm-password">Confirm New Password</Label>
-                                    <Input id="confirm-password" type="password" placeholder="••••••••" />
-                                </div>
-
-                                <div className="pt-4">
-                                    <Button
-                                        variant="outline"
-                                        className="w-full border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                                        disabled={!isPasswordValid && newPassword.length > 0}
-                                    >
-                                        Update Password
-                                    </Button>
-                                </div>
+                                <Button
+                                    className="w-full mt-5"
+                                    disabled={!isPasswordValid && newPassword.length > 0}
+                                >
+                                    Update Password
+                                </Button>
                             </div>
 
-                            <div className="pt-8 mt-8 border-t border-gray-100 dark:border-gray-800">
-                                <h4 className="text-sm font-medium text-red-600 mb-2">Danger Zone</h4>
-                                <Button
-                                    type="button"
-                                    variant="destructive"
-                                    className="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 dark:bg-red-900/10 dark:hover:bg-red-900/20 dark:border-red-900/50"
-                                    onClick={() => setIsDeleteOpen(true)}
-                                >
-                                    Delete Account
-                                </Button>
+                            {/* Delete Account */}
+                            <div className="pt-6 border-t">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="font-medium text-red-600 dark:text-white">Delete Account</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">This action is irreversible</p>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/20"
+                                        onClick={() => setIsDeleteOpen(true)}
+                                    >
+                                        Delete
+                                    </Button>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
