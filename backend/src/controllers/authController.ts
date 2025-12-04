@@ -1,12 +1,30 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import bcrypt from "bcryptjs";
-import generateToken from "../utils/generateToken";
+import generateToken, {
+  generateTokenPair,
+  rotateRefreshToken,
+  revokeRefreshToken,
+  revokeAllUserTokens,
+} from "../utils/generateToken";
+import {
+  validatePassword,
+  getPasswordStrengthLabel,
+} from "../utils/passwordValidator";
+import {
+  logSecurityEventFromRequest,
+  getClientIp,
+  getUserAgent,
+} from "../services/securityLogger";
 
 import {
   sendOnboardingEmail,
   sendPasswordResetOTP,
 } from "../services/emailService";
+
+// Account lockout configuration
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MINUTES = 15;
 
 // @desc    Register a new user
 // @route   POST /api/users
@@ -22,6 +40,15 @@ export const registerUser = async (req: Request, res: Response) => {
     bio,
     phoneNumber,
   } = req.body;
+
+  // Validate password strength
+  const passwordValidation = validatePassword(password);
+  if (!passwordValidation.isValid) {
+    res.status(400);
+    throw new Error(
+      `Password validation failed: ${passwordValidation.errors.join(", ")}`
+    );
+  }
 
   const userExists = await prisma.user.findUnique({
     where: { email },
@@ -52,6 +79,13 @@ export const registerUser = async (req: Request, res: Response) => {
     // Send onboarding email
     sendOnboardingEmail(user.email, user.name || "User");
 
+    // Generate token pair for new user
+    const tokens = await generateTokenPair(
+      user.id,
+      getClientIp(req),
+      getUserAgent(req)
+    );
+
     res.status(201).json({
       _id: user.id,
       name: user.name,
@@ -61,7 +95,9 @@ export const registerUser = async (req: Request, res: Response) => {
       dateOfBirth: user.dateOfBirth,
       bio: user.bio,
       phoneNumber: user.phoneNumber,
-      token: generateToken(user.id),
+      token: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
     });
   } else {
     res.status(400);
@@ -79,11 +115,52 @@ export const authUser = async (req: Request, res: Response) => {
     where: { email },
   });
 
+  // Check if account is locked
+  if (user && user.lockedUntil && user.lockedUntil > new Date()) {
+    const minutesLeft = Math.ceil(
+      (user.lockedUntil.getTime() - Date.now()) / (1000 * 60)
+    );
+
+    await logSecurityEventFromRequest(
+      req,
+      "LOGIN_FAILED",
+      user.id,
+      `Account locked. ${minutesLeft} minutes remaining.`,
+      false
+    );
+
+    res.status(423);
+    throw new Error(
+      `Account is temporarily locked. Please try again in ${minutesLeft} minutes.`
+    );
+  }
+
   if (user && (await bcrypt.compare(password, user.password))) {
     if (user.isDeleted) {
       res.status(403);
       throw new Error("Account deleted. Please reactivate your account.");
     }
+
+    // Reset failed attempts on successful login
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastLoginAt: new Date(),
+        lastLoginIp: getClientIp(req),
+      },
+    });
+
+    // Log successful login
+    await logSecurityEventFromRequest(req, "LOGIN_SUCCESS", user.id);
+
+    // Generate token pair
+    const tokens = await generateTokenPair(
+      user.id,
+      getClientIp(req),
+      getUserAgent(req)
+    );
 
     res.json({
       _id: user.id,
@@ -94,12 +171,130 @@ export const authUser = async (req: Request, res: Response) => {
       dateOfBirth: user.dateOfBirth,
       bio: user.bio,
       phoneNumber: user.phoneNumber,
-      token: generateToken(user.id),
+      token: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
     });
   } else {
+    // Increment failed attempts
+    if (user) {
+      const newFailedAttempts = user.failedLoginAttempts + 1;
+      const updateData: any = { failedLoginAttempts: newFailedAttempts };
+
+      // Lock account if max attempts exceeded
+      if (newFailedAttempts >= MAX_LOGIN_ATTEMPTS) {
+        const lockUntil = new Date();
+        lockUntil.setMinutes(lockUntil.getMinutes() + LOCKOUT_DURATION_MINUTES);
+        updateData.lockedUntil = lockUntil;
+
+        await logSecurityEventFromRequest(
+          req,
+          "ACCOUNT_LOCKED",
+          user.id,
+          `Account locked after ${MAX_LOGIN_ATTEMPTS} failed attempts`
+        );
+      }
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: updateData,
+      });
+
+      await logSecurityEventFromRequest(
+        req,
+        "LOGIN_FAILED",
+        user.id,
+        `Failed attempt ${newFailedAttempts}/${MAX_LOGIN_ATTEMPTS}`,
+        false
+      );
+    } else {
+      // Log failed login for non-existent user (don't reveal user doesn't exist)
+      await logSecurityEventFromRequest(
+        req,
+        "LOGIN_FAILED",
+        undefined,
+        `Login attempt for non-existent email: ${email.substring(0, 3)}***`,
+        false
+      );
+    }
+
     res.status(401);
     throw new Error("Invalid email or password");
   }
+};
+
+// @desc    Refresh access token
+// @route   POST /api/users/refresh-token
+// @access  Public (with valid refresh token)
+export const refreshAccessToken = async (req: Request, res: Response) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    res.status(400);
+    throw new Error("Refresh token is required");
+  }
+
+  const tokens = await rotateRefreshToken(
+    refreshToken,
+    getClientIp(req),
+    getUserAgent(req)
+  );
+
+  if (!tokens) {
+    res.status(401);
+    throw new Error("Invalid or expired refresh token");
+  }
+
+  // Find user for logging
+  const tokenRecord = await prisma.refreshToken.findFirst({
+    where: { token: tokens.refreshToken },
+    select: { userId: true },
+  });
+
+  if (tokenRecord) {
+    await logSecurityEventFromRequest(req, "TOKEN_REFRESH", tokenRecord.userId);
+  }
+
+  res.json({
+    token: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    expiresIn: tokens.expiresIn,
+  });
+};
+
+// @desc    Logout user (revoke refresh token)
+// @route   POST /api/users/logout
+// @access  Private
+export const logoutUser = async (req: Request, res: Response) => {
+  const { refreshToken } = req.body;
+  const userId = (req as any).user?.id;
+
+  if (refreshToken) {
+    await revokeRefreshToken(refreshToken);
+  }
+
+  if (userId) {
+    await logSecurityEventFromRequest(req, "LOGOUT", userId);
+  }
+
+  res.json({ message: "Logged out successfully" });
+};
+
+// @desc    Logout from all devices
+// @route   POST /api/users/logout-all
+// @access  Private
+export const logoutAllDevices = async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+
+  await revokeAllUserTokens(userId);
+  await logSecurityEventFromRequest(
+    req,
+    "TOKEN_REVOKED",
+    userId,
+    "All refresh tokens revoked"
+  );
+
+  res.json({ message: "Logged out from all devices" });
 };
 
 // @desc    Google Auth
@@ -141,6 +336,12 @@ export const googleAuth = async (req: Request, res: Response) => {
               deletedAt: null,
             },
           });
+
+          await logSecurityEventFromRequest(
+            req,
+            "ACCOUNT_REACTIVATED",
+            user.id
+          );
         } else {
           res.status(403);
           throw new Error("Account deleted. Please reactivate your account.");
@@ -168,6 +369,29 @@ export const googleAuth = async (req: Request, res: Response) => {
       sendOnboardingEmail(user.email, user.name || "User");
     }
 
+    // Update last login
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        lastLoginAt: new Date(),
+        lastLoginIp: getClientIp(req),
+      },
+    });
+
+    await logSecurityEventFromRequest(
+      req,
+      "LOGIN_SUCCESS",
+      user.id,
+      "Google SSO"
+    );
+
+    // Generate token pair
+    const tokens = await generateTokenPair(
+      user.id,
+      getClientIp(req),
+      getUserAgent(req)
+    );
+
     res.json({
       _id: user.id,
       name: user.name,
@@ -177,7 +401,9 @@ export const googleAuth = async (req: Request, res: Response) => {
       dateOfBirth: user.dateOfBirth,
       bio: user.bio,
       phoneNumber: user.phoneNumber,
-      token: generateToken(user.id),
+      token: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
     });
   } catch (error) {
     // Pass through our custom errors
@@ -193,11 +419,15 @@ export const googleAuth = async (req: Request, res: Response) => {
 // @route   DELETE /api/users/profile
 // @access  Private
 export const deleteAccount = async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
   const user = await prisma.user.findUnique({
-    where: { id: (req as any).user.id },
+    where: { id: userId },
   });
 
   if (user) {
+    // Revoke all tokens
+    await revokeAllUserTokens(userId);
+
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -205,6 +435,9 @@ export const deleteAccount = async (req: Request, res: Response) => {
         deletedAt: new Date(),
       },
     });
+
+    await logSecurityEventFromRequest(req, "ACCOUNT_DELETED", userId);
+
     res.json({ message: "Account deleted successfully" });
   } else {
     res.status(404);
@@ -233,8 +466,18 @@ export const reactivateAccount = async (req: Request, res: Response) => {
       data: {
         isDeleted: false,
         deletedAt: null,
+        lastLoginAt: new Date(),
+        lastLoginIp: getClientIp(req),
       },
     });
+
+    await logSecurityEventFromRequest(req, "ACCOUNT_REACTIVATED", user.id);
+
+    const tokens = await generateTokenPair(
+      user.id,
+      getClientIp(req),
+      getUserAgent(req)
+    );
 
     res.json({
       _id: user.id,
@@ -245,7 +488,9 @@ export const reactivateAccount = async (req: Request, res: Response) => {
       dateOfBirth: user.dateOfBirth,
       bio: user.bio,
       phoneNumber: user.phoneNumber,
-      token: generateToken(user.id),
+      token: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
     });
   } else {
     res.status(401);
@@ -271,6 +516,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
       phoneNumber: true,
       createdAt: true,
       updatedAt: true,
+      lastLoginAt: true,
     },
   });
 
@@ -286,8 +532,9 @@ export const getUserProfile = async (req: Request, res: Response) => {
 // @route   PUT /api/users/profile
 // @access  Private
 export const updateUserProfile = async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
   const user = await prisma.user.findUnique({
-    where: { id: (req as any).user.id },
+    where: { id: userId },
   });
 
   if (user) {
@@ -319,8 +566,22 @@ export const updateUserProfile = async (req: Request, res: Response) => {
     }
 
     if (password) {
+      // Validate new password
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.isValid) {
+        res.status(400);
+        throw new Error(
+          `Password validation failed: ${passwordValidation.errors.join(", ")}`
+        );
+      }
+
       const salt = await bcrypt.genSalt(10);
       updatedData.password = await bcrypt.hash(password, salt);
+
+      await logSecurityEventFromRequest(req, "PASSWORD_CHANGE", userId);
+
+      // Revoke all other tokens for security
+      await revokeAllUserTokens(userId);
     }
 
     const updatedUser = await prisma.user.update({
@@ -341,9 +602,20 @@ export const updateUserProfile = async (req: Request, res: Response) => {
       },
     });
 
+    await logSecurityEventFromRequest(req, "PROFILE_UPDATED", userId);
+
+    // Generate new tokens
+    const tokens = await generateTokenPair(
+      updatedUser.id,
+      getClientIp(req),
+      getUserAgent(req)
+    );
+
     res.json({
       ...updatedUser,
-      token: generateToken(updatedUser.id),
+      token: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
     });
   } else {
     res.status(404);
@@ -384,6 +656,8 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
         resetPasswordOtpExpiry: otpExpiry,
       },
     });
+
+    await logSecurityEventFromRequest(req, "PASSWORD_RESET_REQUEST", user.id);
 
     // Send OTP via email
     try {
@@ -453,9 +727,13 @@ export const resetPassword = async (req: Request, res: Response) => {
     throw new Error("Passwords do not match");
   }
 
-  if (newPassword.length < 6) {
+  // Validate password strength
+  const passwordValidation = validatePassword(newPassword);
+  if (!passwordValidation.isValid) {
     res.status(400);
-    throw new Error("Password must be at least 6 characters");
+    throw new Error(
+      `Password validation failed: ${passwordValidation.errors.join(", ")}`
+    );
   }
 
   const user = await prisma.user.findUnique({
@@ -490,10 +768,120 @@ export const resetPassword = async (req: Request, res: Response) => {
       password: hashedPassword,
       resetPasswordOtp: null,
       resetPasswordOtpExpiry: null,
+      failedLoginAttempts: 0, // Reset lockout
+      lockedUntil: null,
     },
   });
+
+  // Revoke all existing tokens
+  await revokeAllUserTokens(user.id);
+
+  await logSecurityEventFromRequest(req, "PASSWORD_RESET_SUCCESS", user.id);
 
   res.json({
     message: "Password reset successfully",
   });
+};
+
+// @desc    Validate password strength (utility endpoint)
+// @route   POST /api/users/validate-password
+// @access  Public
+export const checkPasswordStrength = async (req: Request, res: Response) => {
+  const { password } = req.body;
+
+  if (!password) {
+    res.status(400);
+    throw new Error("Password is required");
+  }
+
+  const validation = validatePassword(password);
+
+  res.json({
+    isValid: validation.isValid,
+    score: validation.score,
+    strength: getPasswordStrengthLabel(validation.score),
+    errors: validation.errors,
+    suggestions: validation.suggestions,
+  });
+};
+
+// @desc    Get user security logs
+// @route   GET /api/users/security-logs
+// @access  Private
+export const getSecurityLogs = async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const limit = parseInt(req.query.limit as string) || 50;
+
+  const logs = await prisma.securityLog.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    take: Math.min(limit, 100),
+    select: {
+      id: true,
+      eventType: true,
+      ipAddress: true,
+      userAgent: true,
+      details: true,
+      success: true,
+      createdAt: true,
+    },
+  });
+
+  res.json(logs);
+};
+
+// @desc    Get active sessions
+// @route   GET /api/users/sessions
+// @access  Private
+export const getActiveSessions = async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+
+  const sessions = await prisma.refreshToken.findMany({
+    where: {
+      userId,
+      isRevoked: false,
+      expiresAt: { gt: new Date() },
+    },
+    select: {
+      id: true,
+      ipAddress: true,
+      userAgent: true,
+      createdAt: true,
+      expiresAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  res.json(sessions);
+};
+
+// @desc    Revoke a specific session
+// @route   DELETE /api/users/sessions/:sessionId
+// @access  Private
+export const revokeSession = async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { sessionId } = req.params;
+
+  const session = await prisma.refreshToken.findFirst({
+    where: { id: sessionId, userId },
+  });
+
+  if (!session) {
+    res.status(404);
+    throw new Error("Session not found");
+  }
+
+  await prisma.refreshToken.update({
+    where: { id: sessionId },
+    data: { isRevoked: true },
+  });
+
+  await logSecurityEventFromRequest(
+    req,
+    "TOKEN_REVOKED",
+    userId,
+    `Session ${sessionId} revoked`
+  );
+
+  res.json({ message: "Session revoked successfully" });
 };

@@ -17,16 +17,20 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-interface Transaction {
-    id: string;
+interface ChartDataPoint {
     date: string;
-    amount: number;
+    income: number;
+    expense: number;
+}
+
+interface CategoryStat {
     category: string;
-    type: string;
+    amount: number;
 }
 
 interface DashboardChartsProps {
-    transactions: Transaction[];
+    chartData: ChartDataPoint[];
+    expenseByCategory: CategoryStat[];
 }
 
 const COLORS = [
@@ -40,91 +44,65 @@ const COLORS = [
     '#14B8A6',
 ];
 
-export function DashboardCharts({ transactions }: DashboardChartsProps) {
-    // Monthly expenses data - improved with proper date sorting
-    const monthlyDataMap = transactions
-        .filter((t) => t.type === 'EXPENSE')
-        .reduce((acc: { [key: string]: { amount: number; date: Date } }, t) => {
-            const date = new Date(t.date);
-            // Handle invalid dates
-            if (isNaN(date.getTime())) {
-                console.warn('Invalid date found in transaction:', t);
-                return acc;
-            }
-            const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            if (!acc[yearMonth]) {
-                acc[yearMonth] = { amount: 0, date };
-            }
-            acc[yearMonth].amount += t.amount;
-            return acc;
-        }, {});
+export function DashboardCharts({ chartData, expenseByCategory }: DashboardChartsProps) {
+    // Line Chart - Daily Trend
+    // Format date for display
+    const lineChartData = chartData.map(item => ({
+        ...item,
+        day: new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
+    }));
 
-    const lineChartData = Object.entries(monthlyDataMap)
-        .map(([key, data]) => ({
-            month: new Date(data.date).toLocaleDateString('en-US', {
-                month: 'short',
-                year: 'numeric',
-            }),
-            amount: Number(data.amount.toFixed(2)), // Round to 2 decimal places
-            sortKey: key,
-        }))
-        .sort((a, b) => a.sortKey.localeCompare(b.sortKey)) // Sort chronologically
-        .slice(-6) // Last 6 months
-        .map(({ month, amount }) => ({ month, amount })); // Remove sortKey from final data
-
-    // Category expenses data
-    const categoryData = transactions
-        .filter((t) => t.type === 'EXPENSE')
-        .reduce((acc: { [key: string]: number }, t) => {
-            acc[t.category] = (acc[t.category] || 0) + t.amount;
-            return acc;
-        }, {});
-
-    const barChartData = Object.entries(categoryData)
-        .map(([category, amount]) => ({ category, amount }))
+    // Bar Chart - Top Categories
+    const barChartData = [...expenseByCategory]
         .sort((a, b) => b.amount - a.amount)
         .slice(0, 8); // Top 8 categories
 
-    // Pie chart data (percentage distribution)
-    const totalExpense = transactions
-        .filter((t) => t.type === 'EXPENSE')
-        .reduce((acc, t) => acc + t.amount, 0);
-
-    const pieChartData = Object.entries(categoryData)
-        .map(([category, amount]) => ({
-            name: category,
-            value: amount,
-            percentage: ((amount / totalExpense) * 100).toFixed(1),
+    // Pie Chart - Distribution
+    const totalExpense = expenseByCategory.reduce((acc, item) => acc + item.amount, 0);
+    const pieChartData = expenseByCategory
+        .map(item => ({
+            name: item.category,
+            value: item.amount,
+            percentage: totalExpense > 0 ? ((item.amount / totalExpense) * 100).toFixed(1) : '0',
         }))
         .sort((a, b) => b.value - a.value)
-        .slice(0, 6); // Top 6 for readability
+        .slice(0, 6); // Top 6
 
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {/* Line Chart - Monthly Expenses */}
+            {/* Line Chart - Daily Expenses */}
             <Card className="lg:col-span-2">
                 <CardHeader>
-                    <CardTitle>Monthly Expenses Trend</CardTitle>
+                    <CardTitle>Daily Income & Expense Trend</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {lineChartData.length === 0 ? (
                         <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                            <p>No expense data available. Add some transactions to see the trend.</p>
+                            <p>No data available for this period.</p>
                         </div>
                     ) : (
                         <ResponsiveContainer width="100%" height={300}>
                             <LineChart data={lineChartData}>
                                 <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="month" />
+                                <XAxis dataKey="day" />
                                 <YAxis />
                                 <Tooltip formatter={(value) => `₹${Number(value).toFixed(2)}`} />
                                 <Legend />
                                 <Line
                                     type="monotone"
-                                    dataKey="amount"
-                                    stroke="#8B5CF6"
+                                    dataKey="income"
+                                    stroke="#10B981"
                                     strokeWidth={2}
-                                    name="Expenses"
+                                    name="Income"
+                                    dot={false}
+                                />
+                                <Line
+                                    type="monotone"
+                                    dataKey="expense"
+                                    stroke="#EF4444"
+                                    strokeWidth={2}
+                                    name="Expense"
+                                    dot={false}
                                 />
                             </LineChart>
                         </ResponsiveContainer>

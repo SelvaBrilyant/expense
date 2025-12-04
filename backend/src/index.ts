@@ -37,8 +37,10 @@ import savingsRoutes from "./routes/savingsRoutes";
 import recurringRoutes from "./routes/recurringRoutes";
 import excelRoutes from "./routes/excelRoutes";
 import transactionItemRoutes from "./routes/transactionItemRoutes";
+import dashboardRoutes from "./routes/dashboardRoutes";
 import { initCronJobs } from "./services/cronService";
 import { notFound, errorHandler } from "./middlewares/errorMiddleware";
+import { apiLimiter, authLimiter } from "./middlewares/rateLimitMiddleware";
 
 app.get("/", (req, res) => {
   res.json({
@@ -59,7 +61,10 @@ app.get("/health", (req, res) => {
   });
 });
 
-app.use("/api/users", authRoutes);
+// Apply global API rate limiter
+app.use("/api", apiLimiter);
+
+app.use("/api/users", authLimiter, authRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/transactions/:transactionId/items", transactionItemRoutes);
 app.use("/api/budgets", budgetRoutes);
@@ -67,7 +72,9 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/savings", savingsRoutes);
 app.use("/api/recurring", recurringRoutes);
+app.use("/api/recurring", recurringRoutes);
 app.use("/api/export", excelRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // Swagger Documentation
 import swaggerUi from "swagger-ui-express";
@@ -118,4 +125,3 @@ process.on("unhandledRejection", (error) => {
 
 // Start the server
 startServer();
-

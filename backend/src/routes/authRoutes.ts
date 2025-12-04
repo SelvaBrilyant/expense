@@ -10,6 +10,13 @@ import {
   googleAuth,
   deleteAccount,
   reactivateAccount,
+  refreshAccessToken,
+  logoutUser,
+  logoutAllDevices,
+  checkPasswordStrength,
+  getSecurityLogs,
+  getActiveSessions,
+  revokeSession,
 } from "../controllers/authController";
 import { protect } from "../middlewares/authMiddleware";
 
@@ -78,8 +85,94 @@ router.post("/", registerUser);
  *         description: Successful login
  *       401:
  *         description: Invalid email or password
+ *       423:
+ *         description: Account temporarily locked
  */
 router.post("/login", authUser);
+
+/**
+ * @swagger
+ * /api/users/refresh-token:
+ *   post:
+ *     summary: Refresh access token using refresh token
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: New tokens generated
+ *       401:
+ *         description: Invalid or expired refresh token
+ */
+router.post("/refresh-token", refreshAccessToken);
+
+/**
+ * @swagger
+ * /api/users/logout:
+ *   post:
+ *     summary: Logout user and revoke refresh token
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ */
+router.post("/logout", protect, logoutUser);
+
+/**
+ * @swagger
+ * /api/users/logout-all:
+ *   post:
+ *     summary: Logout from all devices
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logged out from all devices
+ */
+router.post("/logout-all", protect, logoutAllDevices);
+
+/**
+ * @swagger
+ * /api/users/validate-password:
+ *   post:
+ *     summary: Check password strength
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - password
+ *             properties:
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password strength result
+ */
+router.post("/validate-password", checkPasswordStrength);
 
 /**
  * @swagger
@@ -98,9 +191,58 @@ router.post("/login", authUser);
 router
   .route("/profile")
   .get(protect, getUserProfile)
-  .get(protect, getUserProfile)
   .put(protect, updateUserProfile)
   .delete(protect, deleteAccount);
+
+/**
+ * @swagger
+ * /api/users/security-logs:
+ *   get:
+ *     summary: Get user security event logs
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of security events
+ */
+router.get("/security-logs", protect, getSecurityLogs);
+
+/**
+ * @swagger
+ * /api/users/sessions:
+ *   get:
+ *     summary: Get active sessions
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of active sessions
+ */
+router.get("/sessions", protect, getActiveSessions);
+
+/**
+ * @swagger
+ * /api/users/sessions/{sessionId}:
+ *   delete:
+ *     summary: Revoke a specific session
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Session revoked
+ *       404:
+ *         description: Session not found
+ */
+router.delete("/sessions/:sessionId", protect, revokeSession);
 
 /**
  * @swagger

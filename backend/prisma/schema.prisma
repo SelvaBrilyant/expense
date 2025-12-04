@@ -33,10 +33,62 @@ model User {
   // Google SSO
   googleId String? @unique
 
-  transactions Transaction[]
-  budgets      Budget[]
-  recurring    RecurringTransaction[]
-  savings      Saving[]
+  // Account Security
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+  lastLoginIp         String?
+
+  transactions  Transaction[]
+  budgets       Budget[]
+  recurring     RecurringTransaction[]
+  savings       Saving[]
+  refreshTokens RefreshToken[]
+  securityLogs  SecurityLog[]
+}
+
+// Refresh Token for Token Rotation
+model RefreshToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?
+  ipAddress String?
+  isRevoked Boolean  @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Security Event Logging
+model SecurityLog {
+  id        String            @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String?           @db.ObjectId
+  eventType SecurityEventType
+  ipAddress String?
+  userAgent String?
+  details   String?
+  success   Boolean           @default(true)
+  createdAt DateTime          @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+enum SecurityEventType {
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  LOGOUT
+  PASSWORD_CHANGE
+  PASSWORD_RESET_REQUEST
+  PASSWORD_RESET_SUCCESS
+  ACCOUNT_LOCKED
+  ACCOUNT_UNLOCKED
+  TOKEN_REFRESH
+  TOKEN_REVOKED
+  ACCOUNT_DELETED
+  ACCOUNT_REACTIVATED
+  PROFILE_UPDATED
 }
 
 model Transaction {

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Save, Loader2, Shield, User, Mail, Phone, Calendar, Sparkles } from 'lucide-react';
+import { Save, Loader2, Shield, User, Mail, Phone, Calendar, Sparkles, ChevronRight } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
@@ -16,6 +16,8 @@ import { ImageUpload } from '@/components/image-upload';
 import api from '@/lib/api';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { PasswordStrengthIndicator } from '@/components/auth/PasswordStrengthIndicator';
 import {
     Dialog,
     DialogContent,
@@ -30,6 +32,8 @@ function SettingsContent() {
     const router = useRouter();
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
+    const [isPasswordValid, setIsPasswordValid] = useState(false);
     const [formData, setFormData] = useState({
         name: user?.name || '',
         email: user?.email || '',
@@ -367,23 +371,60 @@ function SettingsContent() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="current-password">Current Password</Label>
-                                <Input id="current-password" type="password" placeholder="••••••••" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="new-password">New Password</Label>
-                                <Input id="new-password" type="password" placeholder="••••••••" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="confirm-password">Confirm New Password</Label>
-                                <Input id="confirm-password" type="password" placeholder="••••••••" />
-                            </div>
+                            {/* Security Dashboard Link */}
+                            <Link href="/settings/security">
+                                <div className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-full">
+                                                <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium">Security Dashboard</p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    View active sessions & security logs
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                                    </div>
+                                </div>
+                            </Link>
 
-                            <div className="pt-4">
-                                <Button variant="outline" className="w-full border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20">
-                                    Update Password
-                                </Button>
+                            <div className="border-t pt-4">
+                                <h4 className="text-sm font-medium mb-3">Change Password</h4>
+                                <div className="space-y-2">
+                                    <Label htmlFor="current-password">Current Password</Label>
+                                    <Input id="current-password" type="password" placeholder="••••••••" />
+                                </div>
+                                <div className="space-y-2 mt-3">
+                                    <Label htmlFor="new-password">New Password</Label>
+                                    <Input
+                                        id="new-password"
+                                        type="password"
+                                        placeholder="••••••••"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                    />
+                                    <PasswordStrengthIndicator
+                                        password={newPassword}
+                                        onChange={(isValid) => setIsPasswordValid(isValid)}
+                                    />
+                                </div>
+                                <div className="space-y-2 mt-3">
+                                    <Label htmlFor="confirm-password">Confirm New Password</Label>
+                                    <Input id="confirm-password" type="password" placeholder="••••••••" />
+                                </div>
+
+                                <div className="pt-4">
+                                    <Button
+                                        variant="outline"
+                                        className="w-full border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                                        disabled={!isPasswordValid && newPassword.length > 0}
+                                    >
+                                        Update Password
+                                    </Button>
+                                </div>
                             </div>
 
                             <div className="pt-8 mt-8 border-t border-gray-100 dark:border-gray-800">
