@@ -9,6 +9,7 @@ import { Plus, TrendingUp, Target, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SavingCard } from '@/components/savings/SavingCard';
+import { SavingsGridSkeleton, CardSkeleton } from '@/components/ui/skeleton';
 
 export default function SavingsPage() {
     const { savings, isLoading, fetchSavings } = useSavingsStore();
@@ -46,69 +47,80 @@ export default function SavingsPage() {
         >
             {/* Stats Cards */}
             <div className="grid gap-4 md:grid-cols-4 mb-6">
-                <Card className="border-purple-200 dark:border-purple-800">
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Saved</p>
-                                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                                    ₹{totalSaved.toLocaleString()}
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                                <TrendingUp className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                {isLoading ? (
+                    <>
+                        <CardSkeleton />
+                        <CardSkeleton />
+                        <CardSkeleton />
+                        <CardSkeleton />
+                    </>
+                ) : (
+                    <>
+                        <Card className="border-purple-200 dark:border-purple-800">
+                            <CardContent className="pt-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Saved</p>
+                                        <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                                            ₹{totalSaved.toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                                        <TrendingUp className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
 
-                <Card className="border-blue-200 dark:border-blue-800">
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Target</p>
-                                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                                    ₹{totalTarget.toLocaleString()}
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                <Target className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        <Card className="border-blue-200 dark:border-blue-800">
+                            <CardContent className="pt-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Target</p>
+                                        <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                            ₹{totalTarget.toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                        <Target className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
 
-                <Card className="border-green-200 dark:border-green-800">
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Goals</p>
-                                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                    {activeGoals}
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                                <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        <Card className="border-green-200 dark:border-green-800">
+                            <CardContent className="pt-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Goals</p>
+                                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                            {activeGoals}
+                                        </p>
+                                    </div>
+                                    <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                                        <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
 
-                <Card className="border-indigo-200 dark:border-indigo-800">
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Completed</p>
-                                <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                                    {completedGoals}
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                                <CheckCircle2 className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        <Card className="border-indigo-200 dark:border-indigo-800">
+                            <CardContent className="pt-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Completed</p>
+                                        <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                                            {completedGoals}
+                                        </p>
+                                    </div>
+                                    <div className="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                                        <CheckCircle2 className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </>
+                )}
             </div>
 
             {/* Filters */}
@@ -169,9 +181,7 @@ export default function SavingsPage() {
 
             {/* Savings Goals Grid */}
             {isLoading ? (
-                <div className="flex justify-center items-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-                </div>
+                <SavingsGridSkeleton count={6} />
             ) : savings.length === 0 ? (
                 <Card>
                     <CardContent className="pt-12 pb-12 text-center">

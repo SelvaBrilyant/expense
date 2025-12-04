@@ -55,27 +55,27 @@ export function DataTable<TData, TValue>({
                         placeholder={searchPlaceholder}
                         value={globalFilter ?? ''}
                         onChange={(e) => setGlobalFilter(e.target.value)}
-                        className="max-w-sm"
+                        className="w-full sm:max-w-sm"
                     />
                 </div>
             )}
 
-            {/* Table */}
-            <div className="rounded-md border">
-                <table className="w-full">
+            {/* Table with horizontal scroll on mobile */}
+            <div className="rounded-md border overflow-x-auto">
+                <table className="w-full min-w-[600px]">
                     <thead className="bg-muted/50">
                         {table.getHeaderGroups().map((headerGroup) => (
                             <tr key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => (
                                     <th
                                         key={header.id}
-                                        className="px-4 py-3 text-left text-sm font-medium"
+                                        className="px-3 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium whitespace-nowrap"
                                     >
                                         {header.isPlaceholder ? null : (
                                             <div
                                                 className={
                                                     header.column.getCanSort()
-                                                        ? 'cursor-pointer select-none flex items-center gap-2'
+                                                        ? 'cursor-pointer select-none flex items-center gap-1 sm:gap-2'
                                                         : ''
                                                 }
                                                 onClick={header.column.getToggleSortingHandler()}
@@ -107,7 +107,7 @@ export function DataTable<TData, TValue>({
                                     className="border-t hover:bg-muted/30 transition-colors"
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <td key={cell.id} className="px-4 py-3 text-sm">
+                                        <td key={cell.id} className="px-3 sm:px-4 py-3 text-xs sm:text-sm">
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </td>
                                     ))}
@@ -127,33 +127,34 @@ export function DataTable<TData, TValue>({
                 </table>
             </div>
 
-            {/* Pagination */}
-            <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
+            {/* Pagination - Stack on mobile */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-xs sm:text-sm text-muted-foreground order-2 sm:order-1">
                     {table.getFilteredRowModel().rows.length} total results
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 order-1 sm:order-2">
                     <Button
                         variant="outline"
                         size="sm"
                         onClick={() => table.previousPage()}
                         disabled={!table.getCanPreviousPage()}
+                        className="text-xs sm:text-sm"
                     >
-                        <ChevronLeft className="h-4 w-4" />
-                        Previous
+                        <ChevronLeft className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Previous</span>
                     </Button>
-                    <div className="text-sm">
-                        Page {table.getState().pagination.pageIndex + 1} of{' '}
-                        {table.getPageCount()}
+                    <div className="text-xs sm:text-sm px-2">
+                        {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
                     </div>
                     <Button
                         variant="outline"
                         size="sm"
                         onClick={() => table.nextPage()}
                         disabled={!table.getCanNextPage()}
+                        className="text-xs sm:text-sm"
                     >
-                        Next
-                        <ChevronRight className="h-4 w-4" />
+                        <span className="hidden sm:inline">Next</span>
+                        <ChevronRight className="h-4 w-4 sm:ml-1" />
                     </Button>
                 </div>
             </div>

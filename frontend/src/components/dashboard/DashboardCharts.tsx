@@ -69,25 +69,32 @@ export function DashboardCharts({ chartData, expenseByCategory }: DashboardChart
         .slice(0, 6); // Top 6
 
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
             {/* Line Chart - Daily Expenses */}
-            <Card className="lg:col-span-2">
-                <CardHeader>
-                    <CardTitle>Daily Income & Expense Trend</CardTitle>
+            <Card className="col-span-1 lg:col-span-2">
+                <CardHeader className="pb-2 sm:pb-4">
+                    <CardTitle className="text-sm sm:text-base">Daily Income & Expense Trend</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-2 sm:p-6 pt-0">
                     {lineChartData.length === 0 ? (
-                        <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                        <div className="flex items-center justify-center h-[200px] sm:h-[300px] text-muted-foreground text-sm">
                             <p>No data available for this period.</p>
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height={300}>
-                            <LineChart data={lineChartData}>
+                        <ResponsiveContainer width="100%" height={window?.innerWidth < 640 ? 200 : 300}>
+                            <LineChart data={lineChartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="day" />
-                                <YAxis />
-                                <Tooltip formatter={(value) => `₹${Number(value).toFixed(2)}`} />
-                                <Legend />
+                                <XAxis
+                                    dataKey="day"
+                                    tick={{ fontSize: 10 }}
+                                    interval="preserveStartEnd"
+                                />
+                                <YAxis tick={{ fontSize: 10 }} />
+                                <Tooltip
+                                    formatter={(value) => `₹${Number(value).toFixed(2)}`}
+                                    contentStyle={{ fontSize: '12px' }}
+                                />
+                                <Legend wrapperStyle={{ fontSize: '12px' }} />
                                 <Line
                                     type="monotone"
                                     dataKey="income"
@@ -111,25 +118,25 @@ export function DashboardCharts({ chartData, expenseByCategory }: DashboardChart
             </Card>
 
             {/* Pie Chart - Expense Distribution */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Expense Distribution</CardTitle>
+            <Card className="col-span-1">
+                <CardHeader className="pb-2 sm:pb-4">
+                    <CardTitle className="text-sm sm:text-base">Expense Distribution</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-2 sm:p-6 pt-0">
                     {pieChartData.length === 0 ? (
-                        <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                        <div className="flex items-center justify-center h-[200px] sm:h-[300px] text-muted-foreground text-sm">
                             <p>No expense data available</p>
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height={300}>
+                        <ResponsiveContainer width="100%" height={window?.innerWidth < 640 ? 200 : 300}>
                             <PieChart>
                                 <Pie
                                     data={pieChartData}
                                     cx="50%"
                                     cy="50%"
                                     labelLine={false}
-                                    label={(props) => `${props.name} (${props.payload.percentage}%)`}
-                                    outerRadius={80}
+                                    label={window?.innerWidth >= 640 ? (props) => `${props.name} (${props.payload.percentage}%)` : false}
+                                    outerRadius={window?.innerWidth < 640 ? 60 : 80}
                                     fill="#8884d8"
                                     dataKey="value"
                                 >
@@ -140,7 +147,15 @@ export function DashboardCharts({ chartData, expenseByCategory }: DashboardChart
                                         />
                                     ))}
                                 </Pie>
-                                <Tooltip formatter={(value) => `₹${Number(value).toFixed(2)}`} />
+                                <Tooltip
+                                    formatter={(value) => `₹${Number(value).toFixed(2)}`}
+                                    contentStyle={{ fontSize: '12px' }}
+                                />
+                                <Legend
+                                    wrapperStyle={{ fontSize: '10px' }}
+                                    layout="horizontal"
+                                    align="center"
+                                />
                             </PieChart>
                         </ResponsiveContainer>
                     )}
@@ -148,23 +163,33 @@ export function DashboardCharts({ chartData, expenseByCategory }: DashboardChart
             </Card>
 
             {/* Bar Chart - Category Breakdown */}
-            <Card className="lg:col-span-3">
-                <CardHeader>
-                    <CardTitle>Expenses by Category</CardTitle>
+            <Card className="col-span-1 lg:col-span-3">
+                <CardHeader className="pb-2 sm:pb-4">
+                    <CardTitle className="text-sm sm:text-base">Expenses by Category</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-2 sm:p-6 pt-0">
                     {barChartData.length === 0 ? (
-                        <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                        <div className="flex items-center justify-center h-[200px] sm:h-[300px] text-muted-foreground text-sm">
                             <p>No expense data available</p>
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={barChartData}>
+                        <ResponsiveContainer width="100%" height={window?.innerWidth < 640 ? 200 : 300}>
+                            <BarChart data={barChartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="category" />
-                                <YAxis />
-                                <Tooltip formatter={(value) => `₹${Number(value).toFixed(2)}`} />
-                                <Legend />
+                                <XAxis
+                                    dataKey="category"
+                                    tick={{ fontSize: 10 }}
+                                    interval={0}
+                                    angle={-45}
+                                    textAnchor="end"
+                                    height={60}
+                                />
+                                <YAxis tick={{ fontSize: 10 }} />
+                                <Tooltip
+                                    formatter={(value) => `₹${Number(value).toFixed(2)}`}
+                                    contentStyle={{ fontSize: '12px' }}
+                                />
+                                <Legend wrapperStyle={{ fontSize: '12px' }} />
                                 <Bar dataKey="amount" fill="#EC4899" name="Amount" />
                             </BarChart>
                         </ResponsiveContainer>

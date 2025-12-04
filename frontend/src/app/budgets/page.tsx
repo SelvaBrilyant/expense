@@ -26,6 +26,7 @@ import { Progress } from '@/components/ui/progress';
 import { formatCurrency } from '@/lib/utils';
 import { BudgetDataTable } from '@/components/budgets/BudgetDataTable';
 import { DEFAULT_CATEGORIES } from '@/lib/categoryConstants';
+import { TableSkeleton, BudgetCardsGridSkeleton } from '@/components/ui/skeleton';
 
 export default function BudgetsPage() {
     const { budgetsWithSpending, fetchBudgetsWithSpending, addBudget, updateBudget, deleteBudget, isLoading } =
@@ -208,9 +209,9 @@ export default function BudgetsPage() {
             }
         >
             {/* Filters */}
-            <div className="flex gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
                 <Select value={periodFilter} onValueChange={setPeriodFilter}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[180px]">
                         <SelectValue placeholder="Filter by Period" />
                     </SelectTrigger>
                     <SelectContent>
@@ -222,7 +223,7 @@ export default function BudgetsPage() {
                 </Select>
 
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[180px]">
                         <SelectValue placeholder="Filter by Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -235,7 +236,11 @@ export default function BudgetsPage() {
             </div>
 
             {isLoading ? (
-                <p>Loading budgets...</p>
+                viewMode === 'table' ? (
+                    <TableSkeleton rows={6} columns={6} showSearch={false} />
+                ) : (
+                    <BudgetCardsGridSkeleton count={6} />
+                )
             ) : viewMode === 'table' ? (
                 <BudgetDataTable
                     budgets={filteredBudgets}

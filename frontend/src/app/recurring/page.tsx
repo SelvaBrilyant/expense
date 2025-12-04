@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { DEFAULT_CATEGORIES } from '@/lib/categoryConstants';
 import { RecurringDataTable } from '@/components/recurring/RecurringDataTable';
+import { TableSkeleton } from '@/components/ui/skeleton';
 
 export default function RecurringPage() {
     const { recurringTransactions: recurring, fetchRecurring, addRecurring, deleteRecurring, isLoading } =
@@ -246,9 +247,9 @@ export default function RecurringPage() {
             }
         >
             {/* Filters */}
-            <div className="flex gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
                 <Select value={frequencyFilter} onValueChange={setFrequencyFilter}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[180px]">
                         <SelectValue placeholder="Filter by Frequency" />
                     </SelectTrigger>
                     <SelectContent>
@@ -261,7 +262,7 @@ export default function RecurringPage() {
                 </Select>
 
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[180px]">
                         <SelectValue placeholder="Filter by Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -273,7 +274,7 @@ export default function RecurringPage() {
             </div>
 
             {isLoading ? (
-                <p>Loading...</p>
+                <TableSkeleton rows={6} columns={6} showSearch={false} />
             ) : (
                 <RecurringDataTable
                     recurring={filteredRecurring}

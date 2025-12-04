@@ -26,6 +26,14 @@ import {
 } from '@/components/ui/select';
 import { BudgetStatusWidget } from '@/components/dashboard/BudgetStatusWidget';
 import { UpcomingPaymentsWidget } from '@/components/dashboard/UpcomingPaymentsWidget';
+import {
+    CardSkeleton,
+    QuickStatsSkeleton,
+    WidgetSkeleton,
+    ChartSkeleton,
+    TransactionListSkeleton,
+    InsightsSkeleton,
+} from '@/components/ui/skeleton';
 
 export default function DashboardPage() {
     const { user } = useAuthStore();
@@ -377,89 +385,128 @@ export default function DashboardPage() {
 
             {/* Summary Cards */}
             <div className="grid gap-4 md:grid-cols-3 mb-6">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Balance ({monthOptions[parseInt(selectedMonth)].label} {selectedYear})
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{formatCurrency(summary.balance)}</div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Net for selected period
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Income ({monthOptions[parseInt(selectedMonth)].label} {selectedYear})
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-green-600">
-                            +{formatCurrency(summary.totalIncome)}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                            <p>
-                                💰 Total Income
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Expenses ({monthOptions[parseInt(selectedMonth)].label} {selectedYear})
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-red-600">
-                            -{formatCurrency(summary.totalExpense)}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Total expenses for selected period
-                        </p>
-                    </CardContent>
-                </Card>
+                {isLoading ? (
+                    <>
+                        <CardSkeleton />
+                        <CardSkeleton />
+                        <CardSkeleton />
+                    </>
+                ) : (
+                    <>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">
+                                    Balance ({monthOptions[parseInt(selectedMonth)].label} {selectedYear})
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{formatCurrency(summary.balance)}</div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Net for selected period
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">
+                                    Income ({monthOptions[parseInt(selectedMonth)].label} {selectedYear})
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold text-green-600">
+                                    +{formatCurrency(summary.totalIncome)}
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                                    <p>
+                                        💰 Total Income
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">
+                                    Expenses ({monthOptions[parseInt(selectedMonth)].label} {selectedYear})
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold text-red-600">
+                                    -{formatCurrency(summary.totalExpense)}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Total expenses for selected period
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </>
+                )}
             </div>
 
             {/* Quick Statistics */}
             <div className="mb-6">
-                <QuickStats
-                    summary={summary}
-                    stats={stats}
-                    categoryCount={expenseByCategory.length}
-                    period={monthOptions[parseInt(selectedMonth)].label}
-                    daysInPeriod={daysInPeriod}
-                />
+                {isLoading ? (
+                    <QuickStatsSkeleton />
+                ) : (
+                    <QuickStats
+                        summary={summary}
+                        stats={stats}
+                        categoryCount={expenseByCategory.length}
+                        period={monthOptions[parseInt(selectedMonth)].label}
+                        daysInPeriod={daysInPeriod}
+                    />
+                )}
             </div>
 
             {/* Spending Insights and Monthly Comparison */}
             <div className="grid gap-6 md:grid-cols-2 mb-6">
-                <SpendingInsights
-                    expenseByCategory={expenseByCategory}
-                    period={monthOptions[parseInt(selectedMonth)].label}
-                />
-                {previousPeriodData && (
-                    <MonthlyComparison
-                        currentMonth={{ summary, stats }}
-                        previousMonth={previousPeriodData}
-                        currentMonthName={monthOptions[parseInt(selectedMonth)].label}
-                        previousMonthName="Previous Period"
-                    />
+                {isLoading ? (
+                    <>
+                        <InsightsSkeleton />
+                        <InsightsSkeleton />
+                    </>
+                ) : (
+                    <>
+                        <SpendingInsights
+                            expenseByCategory={expenseByCategory}
+                            period={monthOptions[parseInt(selectedMonth)].label}
+                        />
+                        {previousPeriodData && (
+                            <MonthlyComparison
+                                currentMonth={{ summary, stats }}
+                                previousMonth={previousPeriodData}
+                                currentMonthName={monthOptions[parseInt(selectedMonth)].label}
+                                previousMonthName="Previous Period"
+                            />
+                        )}
+                    </>
                 )}
             </div>
 
             {/* Budgets and Recurring */}
             <div className="grid gap-6 md:grid-cols-2 mb-6">
-                <BudgetStatusWidget budgets={budgetStatus} />
-                <UpcomingPaymentsWidget payments={upcomingRecurring} />
+                {isLoading ? (
+                    <>
+                        <WidgetSkeleton />
+                        <WidgetSkeleton />
+                    </>
+                ) : (
+                    <>
+                        <BudgetStatusWidget budgets={budgetStatus} />
+                        <UpcomingPaymentsWidget payments={upcomingRecurring} />
+                    </>
+                )}
             </div>
 
             {/* Charts */}
             <div className="mb-6">
-                <DashboardCharts chartData={chartData} expenseByCategory={expenseByCategory} />
+                {isLoading ? (
+                    <div className="grid gap-6 md:grid-cols-2">
+                        <ChartSkeleton />
+                        <ChartSkeleton />
+                    </div>
+                ) : (
+                    <DashboardCharts chartData={chartData} expenseByCategory={expenseByCategory} />
+                )}
             </div>
 
             {/* AI Advisor + Recent Transactions */}
@@ -475,7 +522,7 @@ export default function DashboardPage() {
                     <CardContent>
                         <div className="space-y-8">
                             {isLoading ? (
-                                <p>Loading...</p>
+                                <TransactionListSkeleton count={5} />
                             ) : recentTransactions.length === 0 ? (
                                 <p>No transactions found.</p>
                             ) : (

@@ -15,6 +15,7 @@ import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { TransactionsDataTable } from '@/components/transactions/TransactionsDataTable';
+import { TableSkeleton } from '@/components/ui/skeleton';
 
 const CATEGORIES = [
     'All',
@@ -62,9 +63,9 @@ export default function TransactionsPage() {
                 </Link>
             }
         >
-            <div className="flex gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[180px]">
                         <SelectValue placeholder="Filter by Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -75,7 +76,7 @@ export default function TransactionsPage() {
                 </Select>
 
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[180px]">
                         <SelectValue placeholder="Filter by Category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -89,7 +90,7 @@ export default function TransactionsPage() {
             </div>
 
             {isLoading ? (
-                <p>Loading transactions...</p>
+                <TableSkeleton rows={8} columns={6} showSearch={true} />
             ) : (
                 <TransactionsDataTable
                     transactions={transactions}
