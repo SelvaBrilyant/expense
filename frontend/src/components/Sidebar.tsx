@@ -56,7 +56,7 @@ export default function Sidebar() {
             <div className="flex items-center justify-between p-4 border-b">
                 {!isCollapsed && (
                     <Link href="/dashboard" className="text-xl font-bold text-blue-600 truncate">
-                        ExpenseAI
+                        EXPENSE AI
                     </Link>
                 )}
                 <Button

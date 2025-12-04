@@ -106,7 +106,7 @@ export const authUser = async (req: Request, res: Response) => {
 // @route   POST /api/users/google
 // @access  Public
 export const googleAuth = async (req: Request, res: Response) => {
-  const { credential } = req.body;
+  const { credential, reactivate } = req.body;
   const { OAuth2Client } = require("google-auth-library");
   const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -132,8 +132,19 @@ export const googleAuth = async (req: Request, res: Response) => {
       }
 
       if (user.isDeleted) {
-        res.status(403);
-        throw new Error("Account deleted. Please reactivate your account.");
+        if (reactivate) {
+          // Reactivate account
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              isDeleted: false,
+              deletedAt: null,
+            },
+          });
+        } else {
+          res.status(403);
+          throw new Error("Account deleted. Please reactivate your account.");
+        }
       }
     } else {
       // Create new user
@@ -169,6 +180,10 @@ export const googleAuth = async (req: Request, res: Response) => {
       token: generateToken(user.id),
     });
   } catch (error) {
+    // Pass through our custom errors
+    if (res.statusCode === 403) {
+      throw error;
+    }
     res.status(400);
     throw new Error("Google authentication failed");
   }

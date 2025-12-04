@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { Loader2 } from 'lucide-react';
 
-const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-otp'];
+const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password', '/verify-otp'];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const router = useRouter();
@@ -31,7 +31,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         }
     }, [user, isChecking, isLoading, pathname, router]);
 
-    if (isChecking || isLoading) {
+    if (isChecking) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-gray-900">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />

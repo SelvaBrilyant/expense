@@ -50,7 +50,7 @@ interface AuthState {
   logout: () => void;
   checkAuth: () => Promise<void>;
   updateProfile: (data: UpdateProfileData) => Promise<void>;
-  googleLogin: (credential: string) => Promise<void>;
+  googleLogin: (credential: string, reactivate?: boolean) => Promise<void>;
   deleteAccount: () => Promise<void>;
   reactivateAccount: (credentials: LoginCredentials) => Promise<void>;
 }
@@ -133,10 +133,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  googleLogin: async (credential: string) => {
+  googleLogin: async (credential: string, reactivate?: boolean) => {
     set({ isLoading: true, error: null });
     try {
-      const { data } = await api.post("/users/google", { credential });
+      const { data } = await api.post("/users/google", {
+        credential,
+        reactivate,
+      });
       localStorage.setItem("token", data.token);
       set({ user: data, isLoading: false });
     } catch (error: unknown) {

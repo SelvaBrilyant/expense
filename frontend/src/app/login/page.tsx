@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { GoogleLogin } from '@react-oauth/google';
+import { ReactivateAccountDialog } from '@/components/auth/ReactivateAccountDialog';
 
 const formSchema = z.object({
     email: z.string().email({
@@ -32,8 +33,10 @@ const formSchema = z.object({
 
 export default function LoginPage() {
     const router = useRouter();
-    const { login, googleLogin, reactivateAccount, isLoading, error } = useAuthStore();
-    const [isReactivationNeeded, setIsReactivationNeeded] = useState(false);
+    const { login, googleLogin, reactivateAccount, isLoading } = useAuthStore();
+    const [showReactivateDialog, setShowReactivateDialog] = useState(false);
+    const [pendingCredential, setPendingCredential] = useState<string | null>(null);
+    const [pendingValues, setPendingValues] = useState<z.infer<typeof formSchema> | null>(null);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -44,27 +47,16 @@ export default function LoginPage() {
     });
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
-        if (isReactivationNeeded) {
-            await reactivateAccount(values);
-            const state = useAuthStore.getState();
-            if (state.user) {
-                toast.success('Account reactivated successfully');
-                router.push('/dashboard');
-            } else if (state.error) {
-                toast.error(state.error);
-            }
-            return;
-        }
-
         await login(values);
         const state = useAuthStore.getState();
         if (state.user) {
             toast.success('Login successful');
             router.push('/dashboard');
         } else if (state.error) {
-            if (state.error === "Account deleted. Please reactivate your account.") {
-                setIsReactivationNeeded(true);
-                toast.error("Your account was deleted. Please reactivate it to continue.");
+            console.log("Login Error:", state.error); // Debugging
+            if (state.error.includes("Account deleted")) {
+                setPendingValues(values);
+                setShowReactivateDialog(true);
             } else {
                 toast.error(state.error);
             }
@@ -75,16 +67,38 @@ export default function LoginPage() {
         if (credentialResponse.credential) {
             await googleLogin(credentialResponse.credential);
             const state = useAuthStore.getState();
+
             if (state.user) {
                 toast.success('Login successful');
                 router.push('/dashboard');
             } else if (state.error) {
-                if (state.error === "Account deleted. Please reactivate your account.") {
-                    toast.error("Your account was deleted. Please login with password to reactivate.");
+                console.log("Google Login Error:", state.error); // Debugging
+                if (state.error.includes("Account deleted")) {
+                    setPendingCredential(credentialResponse.credential);
+                    setShowReactivateDialog(true);
                 } else {
                     toast.error(state.error);
                 }
             }
+        }
+    };
+
+    const handleReactivate = async () => {
+        if (pendingCredential) {
+            // Google Reactivation
+            await googleLogin(pendingCredential, true);
+        } else if (pendingValues) {
+            // Password Reactivation
+            await reactivateAccount(pendingValues);
+        }
+
+        const state = useAuthStore.getState();
+        if (state.user) {
+            toast.success('Account reactivated successfully');
+            setShowReactivateDialog(false);
+            router.push('/dashboard');
+        } else if (state.error) {
+            toast.error(state.error);
         }
     };
 
@@ -135,7 +149,7 @@ export default function LoginPage() {
                                 </Link>
                             </div>
                             <Button type="submit" className="w-full" disabled={isLoading}>
-                                {isLoading ? 'Processing...' : isReactivationNeeded ? 'Reactivate Account' : 'Login'}
+                                {isLoading ? 'Processing...' : 'Login'}
                             </Button>
 
                             <div className="relative">
@@ -169,6 +183,13 @@ export default function LoginPage() {
                     </p>
                 </CardFooter>
             </Card>
+
+            <ReactivateAccountDialog
+                isOpen={showReactivateDialog}
+                onClose={() => setShowReactivateDialog(false)}
+                onConfirm={handleReactivate}
+                isLoading={isLoading}
+            />
         </div>
     );
 }
