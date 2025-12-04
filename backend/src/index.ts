@@ -11,6 +11,9 @@ const app = express();
 const PORT = Number(process.env.PORT) || 5000;
 const ENV = process.env.NODE_ENV || "development";
 
+// Trust first proxy - Required for rate limiting behind reverse proxy (Railway, Render, etc.)
+app.set("trust proxy", 1);
+
 app.use(express.json());
 app.use(
   cors({
