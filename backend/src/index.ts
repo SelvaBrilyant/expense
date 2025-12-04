@@ -9,11 +9,19 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const ENV = process.env.NODE_ENV || "development";
 
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: ["https://expense-steel.vercel.app", "http://localhost:3000"],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(helmet());
-app.use(morgan('dev'));
+app.use(morgan(ENV === "development" ? "dev" : "combined"));
 
 // Import routes AFTER environment variables are loaded
 import authRoutes from './routes/authRoutes';
@@ -29,7 +37,7 @@ import { initCronJobs } from './services/cronService';
 import { notFound, errorHandler } from './middlewares/errorMiddleware';
 
 app.get('/', (req, res) => {
-  res.send('API is running...');
+  res.send(`API is running on ${ENV} environment on port ${PORT}`);
 });
 
 app.use('/api/users', authRoutes);
