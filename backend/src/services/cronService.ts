@@ -1,14 +1,13 @@
-import cron from 'node-cron';
-import { PrismaClient } from '@prisma/client';
+import cron from "node-cron";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 export const processRecurringTransactions = async () => {
-  console.log('Running recurring transaction check...');
-  
+  console.log("Running recurring transaction check...");
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const todayDayOfWeek = today.getDay(); // 0 (Sunday) to 6 (Saturday)
 
   try {
     const recurringTransactions = await prisma.recurringTransaction.findMany({
@@ -23,12 +22,12 @@ export const processRecurringTransactions = async () => {
     for (const rt of recurringTransactions) {
       try {
         let nextDate = new Date(rt.nextDueDate);
-        
+
         // Process all missed occurrences up to today
         while (nextDate <= today) {
           // Check if we should create transaction on this day
           let shouldCreate = true;
-          
+
           // If daysOfWeek is specified and not empty, check if today matches
           if (rt.daysOfWeek && rt.daysOfWeek.length > 0) {
             const currentDayOfWeek = nextDate.getDay();
@@ -50,18 +49,22 @@ export const processRecurringTransactions = async () => {
                 isRecurring: true,
               },
             });
-            console.log(`Created transaction for ${rt.title} on ${nextDate.toDateString()}`);
+            console.log(
+              `Created transaction for ${
+                rt.title
+              } on ${nextDate.toDateString()}`
+            );
           }
 
           // Calculate next due date based on frequency
           const tempDate = new Date(nextDate);
-          if (rt.frequency === 'DAILY') {
+          if (rt.frequency === "DAILY") {
             tempDate.setDate(tempDate.getDate() + 1);
-          } else if (rt.frequency === 'WEEKLY') {
+          } else if (rt.frequency === "WEEKLY") {
             tempDate.setDate(tempDate.getDate() + 7);
-          } else if (rt.frequency === 'MONTHLY') {
+          } else if (rt.frequency === "MONTHLY") {
             tempDate.setMonth(tempDate.getMonth() + 1);
-          } else if (rt.frequency === 'YEARLY') {
+          } else if (rt.frequency === "YEARLY") {
             tempDate.setFullYear(tempDate.getFullYear() + 1);
           }
           nextDate = tempDate;
@@ -73,19 +76,24 @@ export const processRecurringTransactions = async () => {
           data: { nextDueDate: nextDate },
         });
       } catch (error) {
-        console.error(`Failed to process recurring transaction ${rt.id}:`, error);
+        console.error(
+          `Failed to process recurring transaction ${rt.id}:`,
+          error
+        );
       }
     }
 
-    console.log(`Processed ${recurringTransactions.length} recurring transactions.`);
+    console.log(
+      `Processed ${recurringTransactions.length} recurring transactions.`
+    );
   } catch (error) {
-    console.error('Error running recurring transaction job:', error);
+    console.error("Error running recurring transaction job:", error);
   }
 };
 
 export const initCronJobs = () => {
-  // Run every day at midnight
-  cron.schedule('0 0 * * *', async () => {
+  // Run every day at 12:15 AM (Pacific Time)
+  cron.schedule("15 0 * * *", async () => {
     await processRecurringTransactions();
   });
 };
