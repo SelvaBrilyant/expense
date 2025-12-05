@@ -1,7 +1,6 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { QuickAddWidget } from '@/components/widgets/QuickAddWidget';
 import { AIChatWidget } from '@/components/widgets/AIChatWidget';
 import { useAuthStore } from '@/store/authStore';
 
@@ -17,10 +16,5 @@ export function WidgetsProvider() {
         return null;
     }
 
-    return (
-        <>
-            <QuickAddWidget />
-            <AIChatWidget />
-        </>
-    );
+    return <AIChatWidget />;
 }
