@@ -1,6 +1,6 @@
-import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { aiService } from '../services/aiService';
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+import { aiService } from "../services/aiService";
 
 const prisma = new PrismaClient();
 
@@ -22,17 +22,20 @@ export const getInsights = async (req: Request, res: Response) => {
       },
     },
     orderBy: {
-      date: 'desc',
+      date: "desc",
     },
   });
 
   try {
-    const insights = await aiService.generateInsights((req as any).user, transactions);
+    const insights = await aiService.generateInsights(
+      (req as any).user,
+      transactions
+    );
     res.json({ insights });
   } catch (error) {
     console.error(error);
     res.status(500);
-    throw new Error('AI Service Failed');
+    throw new Error("AI Service Failed");
   }
 };
 
@@ -47,7 +50,7 @@ export const chatWithAdvisor = async (req: Request, res: Response) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     const transactions = await prisma.transaction.findMany({
       where: { userId },
-      orderBy: { date: 'desc' },
+      orderBy: { date: "desc" },
       take: 50,
     });
 
@@ -66,7 +69,7 @@ export const chatWithAdvisor = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500);
-    throw new Error('Chat Failed');
+    throw new Error("Chat Failed");
   }
 };
 
@@ -78,7 +81,7 @@ export const getWeeklyReport = async (req: Request, res: Response) => {
 
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    
+
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
 
@@ -87,7 +90,7 @@ export const getWeeklyReport = async (req: Request, res: Response) => {
         userId,
         date: { gte: weekAgo },
       },
-      orderBy: { date: 'desc' },
+      orderBy: { date: "desc" },
     });
 
     const budgets = await prisma.budget.findMany({
@@ -99,7 +102,7 @@ export const getWeeklyReport = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500);
-    throw new Error('Weekly Report Failed');
+    throw new Error("Weekly Report Failed");
   }
 };
 
@@ -111,17 +114,20 @@ export const analyzeSpendingPatterns = async (req: Request, res: Response) => {
 
   const transactions = await prisma.transaction.findMany({
     where: { userId },
-    orderBy: { date: 'desc' },
+    orderBy: { date: "desc" },
     take: 100,
   });
 
   try {
-    const analysis = await aiService.analyzeSpendingPatterns(transactions, (req as any).user);
+    const analysis = await aiService.analyzeSpendingPatterns(
+      transactions,
+      (req as any).user
+    );
     res.json({ analysis });
   } catch (error) {
     console.error(error);
     res.status(500);
-    throw new Error('Pattern Analysis Failed');
+    throw new Error("Pattern Analysis Failed");
   }
 };
 
@@ -133,7 +139,7 @@ export const detectOverspending = async (req: Request, res: Response) => {
 
   const transactions = await prisma.transaction.findMany({
     where: { userId },
-    orderBy: { date: 'desc' },
+    orderBy: { date: "desc" },
   });
 
   const budgets = await prisma.budget.findMany({
@@ -141,34 +147,42 @@ export const detectOverspending = async (req: Request, res: Response) => {
   });
 
   try {
-    const alerts = await aiService.detectOverspending(transactions, budgets, (req as any).user);
+    const alerts = await aiService.detectOverspending(
+      transactions,
+      budgets,
+      (req as any).user
+    );
     res.json({ alerts });
   } catch (error) {
     console.error(error);
     res.status(500);
-    throw new Error('Overspending Detection Failed');
+    throw new Error("Overspending Detection Failed");
   }
 };
 
 // @desc    Get category-specific advice
 // @route   GET /api/ai/category/:category
 // @access  Private
-export const getCategoryAdvice = async (req: Request,res: Response) => {
+export const getCategoryAdvice = async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { category } = req.params;
 
   const transactions = await prisma.transaction.findMany({
     where: { userId },
-    orderBy: { date: 'desc' },
+    orderBy: { date: "desc" },
   });
 
   try {
-    const advice = await aiService.getCategoryAdvice(category, transactions, (req as any).user);
+    const advice = await aiService.getCategoryAdvice(
+      category,
+      transactions,
+      (req as any).user
+    );
     res.json({ advice });
   } catch (error) {
     console.error(error);
     res.status(500);
-    throw new Error('Category Advice Failed');
+    throw new Error("Category Advice Failed");
   }
 };
 
@@ -180,7 +194,7 @@ export const getRecommendations = async (req: Request, res: Response) => {
 
   const recentTransactions = await prisma.transaction.findMany({
     where: { userId },
-    orderBy: { date: 'desc' },
+    orderBy: { date: "desc" },
     take: 50,
   });
 
@@ -193,6 +207,60 @@ export const getRecommendations = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500);
-    throw new Error('Recommendations Failed');
+    throw new Error("Recommendations Failed");
+  }
+};
+
+// @desc    Parse invoice image using AI
+// @route   POST /api/ai/parse-invoice
+// @access  Private
+export const parseInvoice = async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ success: false, error: "No file uploaded" });
+      return;
+    }
+
+    // Validate file type (images and PDFs)
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+      "application/pdf",
+    ];
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      res.status(400).json({
+        success: false,
+        error:
+          "Invalid file type. Only images (JPEG, PNG, WebP) and PDF files are allowed",
+      });
+      return;
+    }
+
+    // Convert file buffer to base64
+    const base64Data = req.file.buffer.toString("base64");
+
+    // Use AI service to parse the invoice
+    const result = await aiService.parseInvoice(base64Data, req.file.mimetype);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        data: result.data,
+        message: "Invoice parsed successfully",
+      });
+    } else {
+      res.status(422).json({
+        success: false,
+        error: result.error || "Failed to parse invoice",
+      });
+    }
+  } catch (error: any) {
+    console.error("Parse invoice error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || "Failed to parse invoice",
+    });
   }
 };

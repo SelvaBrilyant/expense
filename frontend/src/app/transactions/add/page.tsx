@@ -26,7 +26,8 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { TransactionItemForm, TransactionItem } from '@/components/transactions/TransactionItemForm';
-import { Upload, FileText, X } from 'lucide-react';
+import { InvoiceScanModal, ParsedInvoiceData } from '@/components/transactions/InvoiceScanModal';
+import { Upload, FileText, X, Sparkles, ScanLine } from 'lucide-react';
 import api from '@/lib/api';
 import { PageLayout } from '@/components/layout/PageLayout';
 
@@ -75,6 +76,7 @@ export default function AddTransactionPage() {
     const [invoice, setInvoice] = useState<File | null>(null);
     const [invoiceUrl, setInvoiceUrl] = useState<string>('');
     const [uploading, setUploading] = useState(false);
+    const [scanModalOpen, setScanModalOpen] = useState(false);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -97,6 +99,22 @@ export default function AddTransactionPage() {
     }, [type, form]);
 
     const categories = type === 'INCOME' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+
+    // Handle data extracted from scanned invoice
+    const handleInvoiceDataExtracted = (data: ParsedInvoiceData) => {
+        form.setValue('title', data.title);
+        form.setValue('amount', data.amount.toString());
+        form.setValue('type', data.type);
+        form.setValue('category', data.category);
+        form.setValue('paymentMethod', data.paymentMethod);
+        form.setValue('date', data.date);
+        form.setValue('notes', data.notes);
+
+        // Set items if present
+        if (data.items && data.items.length > 0) {
+            setItems(data.items);
+        }
+    };
 
     const handleInvoiceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -169,8 +187,45 @@ export default function AddTransactionPage() {
 
     return (
         <PageLayout title="Add Transaction">
+            {/* Invoice Scan Modal */}
+            <InvoiceScanModal
+                open={scanModalOpen}
+                onClose={() => setScanModalOpen(false)}
+                onDataExtracted={handleInvoiceDataExtracted}
+            />
+
             <Card className="">
                 <CardContent className="pt-6">
+                    {/* Scan Invoice Button */}
+                    <div className="mb-6">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setScanModalOpen(true)}
+                            className="w-full bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 border-purple-200 dark:border-purple-800 hover:from-purple-100 hover:to-blue-100 dark:hover:from-purple-950/50 dark:hover:to-blue-950/50 transition-all duration-300"
+                        >
+                            <ScanLine className="h-4 w-4 mr-2 text-purple-600 dark:text-purple-400" />
+                            <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent font-semibold">
+                                Scan Invoice with AI
+                            </span>
+                            <Sparkles className="h-4 w-4 ml-2 text-blue-600 dark:text-blue-400" />
+                        </Button>
+                        <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-2">
+                            Upload an invoice or receipt to auto-fill all fields
+                        </p>
+                    </div>
+
+                    <div className="relative mb-6">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t border-gray-200 dark:border-gray-700" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-white dark:bg-gray-900 px-2 text-gray-500">
+                                or enter manually
+                            </span>
+                        </div>
+                    </div>
+
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                             <FormField

@@ -1,4 +1,4 @@
-import express from 'express';
+import express from "express";
 import {
   getInsights,
   chatWithAdvisor,
@@ -7,8 +7,10 @@ import {
   detectOverspending,
   getCategoryAdvice,
   getRecommendations,
-} from '../controllers/aiController';
-import { protect } from '../middlewares/authMiddleware';
+  parseInvoice,
+} from "../controllers/aiController";
+import { protect } from "../middlewares/authMiddleware";
+import { upload } from "../middleware/upload.middleware";
 
 const router = express.Router();
 
@@ -28,7 +30,7 @@ const router = express.Router();
  *     security:
  *       - bearerAuth: []
  */
-router.post('/insights', protect, getInsights);
+router.post("/insights", protect, getInsights);
 
 /**
  * @swagger
@@ -39,7 +41,7 @@ router.post('/insights', protect, getInsights);
  *     security:
  *       - bearerAuth: []
  */
-router.post('/chat', protect, chatWithAdvisor);
+router.post("/chat", protect, chatWithAdvisor);
 
 /**
  * @swagger
@@ -50,7 +52,7 @@ router.post('/chat', protect, chatWithAdvisor);
  *     security:
  *       - bearerAuth: []
  */
-router.get('/weekly-report', protect, getWeeklyReport);
+router.get("/weekly-report", protect, getWeeklyReport);
 
 /**
  * @swagger
@@ -61,7 +63,7 @@ router.get('/weekly-report', protect, getWeeklyReport);
  *     security:
  *       - bearerAuth: []
  */
-router.get('/patterns', protect, analyzeSpendingPatterns);
+router.get("/patterns", protect, analyzeSpendingPatterns);
 
 /**
  * @swagger
@@ -72,7 +74,7 @@ router.get('/patterns', protect, analyzeSpendingPatterns);
  *     security:
  *       - bearerAuth: []
  */
-router.get('/overspending', protect, detectOverspending);
+router.get("/overspending", protect, detectOverspending);
 
 /**
  * @swagger
@@ -83,7 +85,7 @@ router.get('/overspending', protect, detectOverspending);
  *     security:
  *       - bearerAuth: []
  */
-router.get('/category/:category', protect, getCategoryAdvice);
+router.get("/category/:category", protect, getCategoryAdvice);
 
 /**
  * @swagger
@@ -94,7 +96,36 @@ router.get('/category/:category', protect, getCategoryAdvice);
  *     security:
  *       - bearerAuth: []
  */
-router.get('/recommendations', protect, getRecommendations);
+router.get("/recommendations", protect, getRecommendations);
+
+/**
+ * @swagger
+ * /api/ai/parse-invoice:
+ *   post:
+ *     summary: Parse invoice image using AI to extract transaction details
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               invoice:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Invoice parsed successfully
+ *       400:
+ *         description: Invalid file or no file uploaded
+ *       422:
+ *         description: Failed to parse invoice
+ *       500:
+ *         description: Server error
+ */
+router.post("/parse-invoice", protect, upload.single("invoice"), parseInvoice);
 
 export default router;
-

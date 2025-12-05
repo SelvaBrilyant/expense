@@ -442,6 +442,142 @@ Your highest spending category is **${topCategory}**.
     });
     return trends;
   }
+
+  async parseInvoice(
+    imageBase64: string,
+    mimeType: string
+  ): Promise<{
+    success: boolean;
+    data?: {
+      title: string;
+      amount: number;
+      date: string;
+      category: string;
+      type: "INCOME" | "EXPENSE";
+      paymentMethod: string;
+      notes: string;
+      items: Array<{ name: string; quantity: number; price: number }>;
+    };
+    error?: string;
+  }> {
+    try {
+      const prompt = `Analyze this invoice/receipt image and extract the following information in JSON format:
+
+{
+  "title": "Brief description of the purchase (e.g., 'Grocery Shopping at BigBazaar')",
+  "amount": <total amount as a number without currency symbol>,
+  "date": "YYYY-MM-DD format (use today's date if not visible)",
+  "category": "<one of: Food, Travel, Groceries, Entertainment, Shopping, Bills, Investments, Loans, UPI Payments, Others>",
+  "type": "EXPENSE",
+  "paymentMethod": "<one of: CASH, CARD, UPI, WALLET, NET_BANKING, OTHER>",
+  "notes": "Additional details like store name, address, invoice number if available",
+  "items": [
+    { "name": "Item name", "quantity": <number>, "price": <item price as number> }
+  ]
+}
+
+Instructions:
+1. Extract ALL line items from the invoice if visible
+2. The 'amount' should be the final total/grand total
+3. Determine the category based on the items purchased
+4. Detect payment method from the invoice if mentioned (UPI, Card, Cash, etc.)
+5. If date is not visible, use today's date: ${
+        new Date().toISOString().split("T")[0]
+      }
+6. For items, calculate price per unit if only total is shown
+7. Return ONLY valid JSON, no additional text
+
+If you cannot read the invoice clearly, still provide your best estimate with available information.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                inlineData: {
+                  mimeType: mimeType,
+                  data: imageBase64,
+                },
+              },
+              {
+                text: prompt,
+              },
+            ],
+          },
+        ],
+      });
+
+      const responseText = response.text || "";
+
+      // Extract JSON from response (handle markdown code blocks)
+      let jsonStr = responseText;
+      const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        jsonStr = jsonMatch[1].trim();
+      }
+
+      // Clean up the string - remove any trailing commas before closing brackets
+      jsonStr = jsonStr.replace(/,(\s*[}\]])/g, "$1");
+
+      const parsedData = JSON.parse(jsonStr);
+
+      // Validate and sanitize the parsed data
+      const validCategories = [
+        "Food",
+        "Travel",
+        "Groceries",
+        "Entertainment",
+        "Shopping",
+        "Bills",
+        "Investments",
+        "Loans",
+        "UPI Payments",
+        "Others",
+      ];
+      const validPaymentMethods = [
+        "CASH",
+        "CARD",
+        "UPI",
+        "WALLET",
+        "NET_BANKING",
+        "OTHER",
+      ];
+
+      return {
+        success: true,
+        data: {
+          title: parsedData.title || "Invoice Purchase",
+          amount: Math.abs(parseFloat(parsedData.amount)) || 0,
+          date: parsedData.date || new Date().toISOString().split("T")[0],
+          category: validCategories.includes(parsedData.category)
+            ? parsedData.category
+            : "Others",
+          type: parsedData.type === "INCOME" ? "INCOME" : "EXPENSE",
+          paymentMethod: validPaymentMethods.includes(parsedData.paymentMethod)
+            ? parsedData.paymentMethod
+            : "OTHER",
+          notes: parsedData.notes || "",
+          items: Array.isArray(parsedData.items)
+            ? parsedData.items.map((item: any) => ({
+                name: item.name || "Item",
+                quantity: parseFloat(item.quantity) || 1,
+                price: parseFloat(item.price) || 0,
+              }))
+            : [],
+        },
+      };
+    } catch (error: any) {
+      console.error("Invoice parsing error:", error);
+      return {
+        success: false,
+        error:
+          error.message ||
+          "Failed to parse invoice. Please try again or enter details manually.",
+      };
+    }
+  }
 }
 
 export const aiService = new AIService();
