@@ -578,6 +578,352 @@ If you cannot read the invoice clearly, still provide your best estimate with av
       };
     }
   }
+
+  async suggestCategory(
+    title: string,
+    type: "INCOME" | "EXPENSE"
+  ): Promise<{
+    category: string;
+    confidence: number;
+    reason: string;
+  }> {
+    const lowerTitle = title.toLowerCase();
+
+    // Fast keyword-based matching for common patterns
+    if (type === "INCOME") {
+      if (lowerTitle.includes("salary") || lowerTitle.includes("payroll")) {
+        return {
+          category: "Salary",
+          confidence: 0.95,
+          reason: "Salary keyword detected",
+        };
+      }
+      if (
+        lowerTitle.includes("freelance") ||
+        lowerTitle.includes("project") ||
+        lowerTitle.includes("client")
+      ) {
+        return {
+          category: "Freelance",
+          confidence: 0.85,
+          reason: "Freelance keyword detected",
+        };
+      }
+      if (lowerTitle.includes("refund") || lowerTitle.includes("return")) {
+        return {
+          category: "Refund",
+          confidence: 0.9,
+          reason: "Refund keyword detected",
+        };
+      }
+      if (lowerTitle.includes("gift") || lowerTitle.includes("birthday")) {
+        return {
+          category: "Gift",
+          confidence: 0.85,
+          reason: "Gift keyword detected",
+        };
+      }
+      if (
+        lowerTitle.includes("dividend") ||
+        lowerTitle.includes("interest") ||
+        lowerTitle.includes("stock")
+      ) {
+        return {
+          category: "Investments",
+          confidence: 0.9,
+          reason: "Investment keyword detected",
+        };
+      }
+      if (lowerTitle.includes("rent")) {
+        return {
+          category: "Rental",
+          confidence: 0.9,
+          reason: "Rental keyword detected",
+        };
+      }
+      return {
+        category: "Other",
+        confidence: 0.5,
+        reason: "No specific pattern detected",
+      };
+    }
+
+    // Expense categories
+    if (
+      lowerTitle.includes("uber") ||
+      lowerTitle.includes("ola") ||
+      lowerTitle.includes("cab") ||
+      lowerTitle.includes("metro") ||
+      lowerTitle.includes("train") ||
+      lowerTitle.includes("flight") ||
+      lowerTitle.includes("bus")
+    ) {
+      return {
+        category: "Travel",
+        confidence: 0.95,
+        reason: "Travel keyword detected",
+      };
+    }
+    if (
+      lowerTitle.includes("swiggy") ||
+      lowerTitle.includes("zomato") ||
+      lowerTitle.includes("restaurant") ||
+      lowerTitle.includes("cafe") ||
+      lowerTitle.includes("food") ||
+      lowerTitle.includes("lunch") ||
+      lowerTitle.includes("dinner") ||
+      lowerTitle.includes("breakfast")
+    ) {
+      return {
+        category: "Food",
+        confidence: 0.95,
+        reason: "Food keyword detected",
+      };
+    }
+    if (
+      lowerTitle.includes("grocery") ||
+      lowerTitle.includes("bigbasket") ||
+      lowerTitle.includes("dmart") ||
+      lowerTitle.includes("vegetables") ||
+      lowerTitle.includes("fruits") ||
+      lowerTitle.includes("supermarket")
+    ) {
+      return {
+        category: "Groceries",
+        confidence: 0.95,
+        reason: "Grocery keyword detected",
+      };
+    }
+    if (
+      lowerTitle.includes("amazon") ||
+      lowerTitle.includes("flipkart") ||
+      lowerTitle.includes("myntra") ||
+      lowerTitle.includes("shopping") ||
+      lowerTitle.includes("clothes")
+    ) {
+      return {
+        category: "Shopping",
+        confidence: 0.9,
+        reason: "Shopping keyword detected",
+      };
+    }
+    if (
+      lowerTitle.includes("netflix") ||
+      lowerTitle.includes("prime") ||
+      lowerTitle.includes("movie") ||
+      lowerTitle.includes("game") ||
+      lowerTitle.includes("spotify") ||
+      lowerTitle.includes("hotstar")
+    ) {
+      return {
+        category: "Entertainment",
+        confidence: 0.95,
+        reason: "Entertainment keyword detected",
+      };
+    }
+    if (
+      lowerTitle.includes("electricity") ||
+      lowerTitle.includes("water") ||
+      lowerTitle.includes("gas") ||
+      lowerTitle.includes("wifi") ||
+      lowerTitle.includes("mobile") ||
+      lowerTitle.includes("recharge") ||
+      lowerTitle.includes("bill")
+    ) {
+      return {
+        category: "Bills",
+        confidence: 0.95,
+        reason: "Bill keyword detected",
+      };
+    }
+    if (lowerTitle.includes("emi") || lowerTitle.includes("loan")) {
+      return {
+        category: "Loans",
+        confidence: 0.95,
+        reason: "Loan keyword detected",
+      };
+    }
+    if (
+      lowerTitle.includes("mutual fund") ||
+      lowerTitle.includes("sip") ||
+      lowerTitle.includes("stock") ||
+      lowerTitle.includes("investment")
+    ) {
+      return {
+        category: "Investments",
+        confidence: 0.9,
+        reason: "Investment keyword detected",
+      };
+    }
+    if (
+      lowerTitle.includes("upi") ||
+      lowerTitle.includes("gpay") ||
+      lowerTitle.includes("phonepe") ||
+      lowerTitle.includes("paytm")
+    ) {
+      return {
+        category: "UPI Payments",
+        confidence: 0.7,
+        reason: "UPI keyword detected",
+      };
+    }
+
+    return {
+      category: "Others",
+      confidence: 0.5,
+      reason: "No specific pattern detected",
+    };
+  }
+
+  async predictSpending(transactions: any[]): Promise<{
+    predictions: Array<{
+      category: string;
+      predictedAmount: number;
+      trend: "up" | "down" | "stable";
+      confidence: number;
+      reason: string;
+    }>;
+    totalPredicted: number;
+    insights: string[];
+  }> {
+    // Group transactions by month and category
+    const monthlySpending: { [month: string]: { [category: string]: number } } =
+      {};
+
+    transactions.forEach((t) => {
+      if (t.type === "EXPENSE") {
+        const monthKey = new Date(t.date).toISOString().slice(0, 7);
+        if (!monthlySpending[monthKey]) {
+          monthlySpending[monthKey] = {};
+        }
+        monthlySpending[monthKey][t.category] =
+          (monthlySpending[monthKey][t.category] || 0) + t.amount;
+      }
+    });
+
+    const sortedMonths = Object.keys(monthlySpending).sort();
+    const predictions: Array<{
+      category: string;
+      predictedAmount: number;
+      trend: "up" | "down" | "stable";
+      confidence: number;
+      reason: string;
+    }> = [];
+
+    // Get all unique categories
+    const categories = new Set<string>();
+    Object.values(monthlySpending).forEach((monthData) => {
+      Object.keys(monthData).forEach((cat) => categories.add(cat));
+    });
+
+    // Calculate predictions for each category
+    categories.forEach((category) => {
+      const categorySpending = sortedMonths.map(
+        (month) => monthlySpending[month][category] || 0
+      );
+
+      const recentMonths = categorySpending.slice(-3);
+      const avg = recentMonths.reduce((a, b) => a + b, 0) / recentMonths.length;
+
+      // Calculate trend
+      let trend: "up" | "down" | "stable" = "stable";
+      let trendReason = "Spending is relatively stable";
+
+      if (recentMonths.length >= 2) {
+        const recentAvg =
+          (recentMonths[recentMonths.length - 1] +
+            recentMonths[recentMonths.length - 2]) /
+          2;
+        const olderAvg = recentMonths[0];
+
+        if (recentAvg > olderAvg * 1.15) {
+          trend = "up";
+          trendReason = `Spending has increased by ${Math.round(
+            ((recentAvg - olderAvg) / olderAvg) * 100
+          )}%`;
+        } else if (recentAvg < olderAvg * 0.85) {
+          trend = "down";
+          trendReason = `Spending has decreased by ${Math.round(
+            ((olderAvg - recentAvg) / olderAvg) * 100
+          )}%`;
+        }
+      }
+
+      // Apply trend to prediction
+      let predictedAmount = avg;
+      if (trend === "up") {
+        predictedAmount = avg * 1.1;
+      } else if (trend === "down") {
+        predictedAmount = avg * 0.9;
+      }
+
+      // Confidence based on data consistency
+      const variance =
+        recentMonths.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) /
+        recentMonths.length;
+      const stdDev = Math.sqrt(variance);
+      const cv = avg > 0 ? stdDev / avg : 0;
+      const confidence = Math.max(0.3, Math.min(0.95, 1 - cv));
+
+      if (avg > 0) {
+        predictions.push({
+          category,
+          predictedAmount: Math.round(predictedAmount),
+          trend,
+          confidence: Math.round(confidence * 100) / 100,
+          reason: trendReason,
+        });
+      }
+    });
+
+    // Sort by predicted amount
+    predictions.sort((a, b) => b.predictedAmount - a.predictedAmount);
+
+    const totalPredicted = predictions.reduce(
+      (sum, p) => sum + p.predictedAmount,
+      0
+    );
+
+    // Generate insights
+    const insights: string[] = [];
+
+    const topSpending = predictions[0];
+    if (topSpending) {
+      insights.push(
+        `Your highest predicted expense is ${
+          topSpending.category
+        } at ₹${topSpending.predictedAmount.toLocaleString()}`
+      );
+    }
+
+    const increasingCategories = predictions.filter((p) => p.trend === "up");
+    if (increasingCategories.length > 0) {
+      insights.push(
+        `Watch out: ${increasingCategories.map((c) => c.category).join(", ")} ${
+          increasingCategories.length === 1 ? "is" : "are"
+        } showing an upward trend`
+      );
+    }
+
+    const decreasingCategories = predictions.filter((p) => p.trend === "down");
+    if (decreasingCategories.length > 0) {
+      insights.push(
+        `Good progress: ${decreasingCategories
+          .map((c) => c.category)
+          .join(", ")} spending is decreasing`
+      );
+    }
+
+    insights.push(
+      `Total predicted spending for next month: ₹${totalPredicted.toLocaleString()}`
+    );
+
+    return {
+      predictions: predictions.slice(0, 10),
+      totalPredicted,
+      insights,
+    };
+  }
 }
 
 export const aiService = new AIService();

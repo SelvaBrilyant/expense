@@ -264,3 +264,65 @@ export const parseInvoice = async (req: Request, res: Response) => {
     });
   }
 };
+
+// @desc    Suggest category based on transaction title
+// @route   POST /api/ai/suggest-category
+// @access  Private
+export const suggestCategory = async (req: Request, res: Response) => {
+  try {
+    const { title, type } = req.body;
+
+    if (!title) {
+      res.status(400).json({ success: false, error: "Title is required" });
+      return;
+    }
+
+    const transactionType = type === "INCOME" ? "INCOME" : "EXPENSE";
+    const result = await aiService.suggestCategory(title, transactionType);
+
+    res.json({
+      success: true,
+      ...result,
+    });
+  } catch (error: any) {
+    console.error("Suggest category error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || "Failed to suggest category",
+    });
+  }
+};
+
+// @desc    Predict next month's spending
+// @route   GET /api/ai/predict-spending
+// @access  Private
+export const predictSpending = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+
+    // Fetch last 6 months of transactions for prediction
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        userId,
+        date: { gte: sixMonthsAgo },
+      },
+      orderBy: { date: "desc" },
+    });
+
+    const result = await aiService.predictSpending(transactions);
+
+    res.json({
+      success: true,
+      ...result,
+    });
+  } catch (error: any) {
+    console.error("Spending prediction error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || "Failed to predict spending",
+    });
+  }
+};

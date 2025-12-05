@@ -8,6 +8,8 @@ import {
   getCategoryAdvice,
   getRecommendations,
   parseInvoice,
+  suggestCategory,
+  predictSpending,
 } from "../controllers/aiController";
 import { protect } from "../middlewares/authMiddleware";
 import { upload } from "../middleware/upload.middleware";
@@ -100,6 +102,22 @@ router.get("/recommendations", protect, getRecommendations);
 
 /**
  * @swagger
+ * /api/ai/predict-spending:
+ *   get:
+ *     summary: Predict next month's spending
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Spending predictions by category
+ *       500:
+ *         description: Server error
+ */
+router.get("/predict-spending", protect, predictSpending);
+
+/**
+ * @swagger
  * /api/ai/parse-invoice:
  *   post:
  *     summary: Parse invoice image using AI to extract transaction details
@@ -127,5 +145,39 @@ router.get("/recommendations", protect, getRecommendations);
  *         description: Server error
  */
 router.post("/parse-invoice", protect, upload.single("invoice"), parseInvoice);
+
+/**
+ * @swagger
+ * /api/ai/suggest-category:
+ *   post:
+ *     summary: Suggest category based on transaction title
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: Transaction title to analyze
+ *               type:
+ *                 type: string
+ *                 enum: [INCOME, EXPENSE]
+ *                 default: EXPENSE
+ *     responses:
+ *       200:
+ *         description: Category suggestion returned
+ *       400:
+ *         description: Title is required
+ *       500:
+ *         description: Server error
+ */
+router.post("/suggest-category", protect, suggestCategory);
 
 export default router;

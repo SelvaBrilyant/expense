@@ -18,6 +18,7 @@ import {
     Wallet,
     Menu,
     X,
+    BarChart3,
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
@@ -31,6 +32,7 @@ interface NavItem {
 const navItems: NavItem[] = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/transactions', label: 'Transactions', icon: Receipt },
+    { href: '/reports', label: 'Reports', icon: BarChart3 },
     { href: '/budgets', label: 'Budgets', icon: PiggyBank },
     { href: '/savings', label: 'Savings', icon: Wallet },
     { href: '/recurring', label: 'Recurring', icon: Repeat },

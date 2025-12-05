@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import AuthGuard from "@/components/AuthGuard";
 import Sidebar from "@/components/Sidebar";
 import { GoogleAuthProvider } from "@/components/providers/GoogleAuthProvider";
+import { WidgetsProvider } from "@/components/providers/WidgetsProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,6 +40,7 @@ export default function RootLayout({
                 {children}
               </main>
             </div>
+            <WidgetsProvider />
           </AuthGuard>
           <Toaster />
         </GoogleAuthProvider>
@@ -46,3 +48,4 @@ export default function RootLayout({
     </html>
   );
 }
+

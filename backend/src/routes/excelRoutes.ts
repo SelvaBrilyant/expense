@@ -1,10 +1,11 @@
-import express from 'express';
-import { protect } from '../middlewares/authMiddleware';
+import express from "express";
+import { protect } from "../middlewares/authMiddleware";
 import {
   exportDashboard,
   exportTransactions,
   exportCategories,
-} from '../controllers/excelController';
+} from "../controllers/excelController";
+import { generatePDFReport } from "../controllers/pdfController";
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ const router = express.Router();
  *     security:
  *       - bearerAuth: []
  */
-router.get('/dashboard', protect, exportDashboard);
+router.get("/dashboard", protect, exportDashboard);
 
 /**
  * @swagger
@@ -28,7 +29,7 @@ router.get('/dashboard', protect, exportDashboard);
  *     security:
  *       - bearerAuth: []
  */
-router.get('/transactions', protect, exportTransactions);
+router.get("/transactions", protect, exportTransactions);
 
 /**
  * @swagger
@@ -39,6 +40,23 @@ router.get('/transactions', protect, exportTransactions);
  *     security:
  *       - bearerAuth: []
  */
-router.get('/categories', protect, exportCategories);
+router.get("/categories", protect, exportCategories);
+
+/**
+ * @swagger
+ * /api/export/pdf-report:
+ *   get:
+ *     summary: Generate PDF financial report
+ *     tags: [Export]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: year
+ *         schema:
+ *           type: integer
+ *         description: Year for the report (defaults to current year)
+ */
+router.get("/pdf-report", protect, generatePDFReport);
 
 export default router;

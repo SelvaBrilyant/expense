@@ -1,6 +1,14 @@
-import express from 'express';
-import { getBudgets, setBudget, deleteBudget, getBudgetsWithSpending, updateBudget } from '../controllers/budgetController';
-import { protect } from '../middlewares/authMiddleware';
+import express from "express";
+import {
+  getBudgets,
+  setBudget,
+  deleteBudget,
+  getBudgetsWithSpending,
+  updateBudget,
+  getBudgetInsights,
+  getBudgetHistory,
+} from "../controllers/budgetController";
+import { protect } from "../middlewares/authMiddleware";
 
 const router = express.Router();
 
@@ -53,9 +61,7 @@ const router = express.Router();
  *       401:
  *         description: Not authorized
  */
-router.route('/')
-  .get(protect, getBudgets)
-  .post(protect, setBudget);
+router.route("/").get(protect, getBudgets).post(protect, setBudget);
 
 /**
  * @swagger
@@ -71,7 +77,45 @@ router.route('/')
  *       401:
  *         description: Not authorized
  */
-router.get('/spending', protect, getBudgetsWithSpending);
+router.get("/spending", protect, getBudgetsWithSpending);
+
+/**
+ * @swagger
+ * /api/budgets/insights:
+ *   get:
+ *     summary: Get AI-powered budget insights and recommendations
+ *     tags: [Budgets]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Budget insights with health score
+ *       401:
+ *         description: Not authorized
+ */
+router.get("/insights", protect, getBudgetInsights);
+
+/**
+ * @swagger
+ * /api/budgets/{id}/history:
+ *   get:
+ *     summary: Get 6-month spending history for a budget
+ *     tags: [Budgets]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Monthly spending history
+ *       404:
+ *         description: Budget not found
+ */
+router.get("/:id/history", protect, getBudgetHistory);
 
 /**
  * @swagger
@@ -124,8 +168,6 @@ router.get('/spending', protect, getBudgetsWithSpending);
  *       404:
  *         description: Budget not found
  */
-router.route('/:id')
-  .put(protect, updateBudget)
-  .delete(protect, deleteBudget);
+router.route("/:id").put(protect, updateBudget).delete(protect, deleteBudget);
 
 export default router;
