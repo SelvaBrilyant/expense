@@ -26,8 +26,10 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Upload, FileText, X } from 'lucide-react';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { TransactionItemForm, TransactionItem } from '@/components/transactions/TransactionItemForm';
+import api from '@/lib/api';
 
 const formSchema = z.object({
     title: z.string().min(2, 'Title is required'),
@@ -73,6 +75,11 @@ export default function EditTransactionPage() {
     const id = params.id as string;
     const { transactions, updateTransaction, isLoading } = useTransactionStore();
     const [transaction, setTransaction] = useState<Transaction | null>(null);
+    const [items, setItems] = useState<TransactionItem[]>([]);
+    const [invoice, setInvoice] = useState<File | null>(null);
+    const [invoiceUrl, setInvoiceUrl] = useState<string>('');
+    const [existingInvoiceUrl, setExistingInvoiceUrl] = useState<string>('');
+    const [uploading, setUploading] = useState(false);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -100,6 +107,15 @@ export default function EditTransactionPage() {
                 date: new Date(found.date).toISOString().split('T')[0],
                 notes: found.notes || '',
             });
+            // Set existing items
+            if (found.items && found.items.length > 0) {
+                setItems(found.items);
+            }
+            // Set existing invoice URL
+            if (found.invoiceUrl) {
+                setExistingInvoiceUrl(found.invoiceUrl);
+                setInvoiceUrl(found.invoiceUrl);
+            }
         }
     }, [id, transactions, form]);
 
@@ -114,10 +130,67 @@ export default function EditTransactionPage() {
 
     const categories = type === 'INCOME' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
+    const handleInvoiceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validate file size (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('File size must be less than 5MB');
+            return;
+        }
+
+        // Validate file type
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            toast.error('Only PDF and image files are allowed');
+            return;
+        }
+
+        setInvoice(file);
+
+        // Upload to backend
+        setUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('invoice', file);
+
+            const response = await api.post('/upload/invoice', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            setInvoiceUrl(response.data.url);
+            setExistingInvoiceUrl(''); // Clear existing as we have a new one
+            toast.success('Invoice uploaded successfully');
+        } catch (error) {
+            console.error('Invoice upload failed:', error);
+            toast.error('Failed to upload invoice');
+            setInvoice(null);
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const removeInvoice = () => {
+        setInvoice(null);
+        setInvoiceUrl('');
+        setExistingInvoiceUrl('');
+    };
+
+    const handleTotalChange = (total: number) => {
+        if (total > 0) {
+            form.setValue('amount', total.toString());
+        }
+    };
+
     async function onSubmit(values: z.infer<typeof formSchema>) {
         await updateTransaction(id, {
             ...values,
             amount: Number(values.amount),
+            invoiceUrl: invoiceUrl || undefined,
+            items: items.length > 0 ? items : undefined,
         });
         const state = useTransactionStore.getState();
         if (!state.error) {
@@ -162,9 +235,14 @@ export default function EditTransactionPage() {
                                     name="amount"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Amount</FormLabel>
+                                            <FormLabel>Amount{items.length > 0 && ' (Auto-calculated from items)'}</FormLabel>
                                             <FormControl>
-                                                <Input type="number" placeholder="0.00" {...field} />
+                                                <Input
+                                                    type="number"
+                                                    placeholder="0.00"
+                                                    {...field}
+                                                    disabled={items.length > 0}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -269,6 +347,72 @@ export default function EditTransactionPage() {
                                 )}
                             />
 
+                            {/* Invoice Upload Section */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Invoice (Optional)</label>
+                                {!invoice && !existingInvoiceUrl ? (
+                                    <div className="border-2 border-dashed rounded-lg p-4">
+                                        <input
+                                            type="file"
+                                            id="invoice-upload"
+                                            className="hidden"
+                                            accept=".pdf,image/*"
+                                            onChange={handleInvoiceUpload}
+                                            disabled={uploading}
+                                        />
+                                        <label
+                                            htmlFor="invoice-upload"
+                                            className="flex flex-col items-center cursor-pointer"
+                                        >
+                                            <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                                            <span className="text-sm text-gray-600">
+                                                {uploading ? 'Uploading...' : 'Click to upload PDF or image (max 5MB)'}
+                                            </span>
+                                        </label>
+                                    </div>
+                                ) : invoice ? (
+                                    <div className="flex items-center gap-2 p-3 border rounded-lg bg-blue-50">
+                                        <FileText className="h-5 w-5 text-blue-600" />
+                                        <span className="flex-1 text-sm">{invoice.name}</span>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={removeInvoice}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ) : existingInvoiceUrl ? (
+                                    <div className="flex items-center gap-2 p-3 border rounded-lg bg-green-50">
+                                        <FileText className="h-5 w-5 text-green-600" />
+                                        <a
+                                            href={existingInvoiceUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex-1 text-sm text-green-700 hover:underline"
+                                        >
+                                            View existing invoice
+                                        </a>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={removeInvoice}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ) : null}
+                            </div>
+
+                            {/* Transaction Items Section */}
+                            <TransactionItemForm
+                                items={items}
+                                onChange={setItems}
+                                onTotalChange={handleTotalChange}
+                            />
+
                             <FormField
                                 control={form.control}
                                 name="notes"
@@ -291,7 +435,7 @@ export default function EditTransactionPage() {
                                 >
                                     Cancel
                                 </Button>
-                                <Button type="submit" disabled={isLoading}>
+                                <Button type="submit" disabled={isLoading || uploading}>
                                     {isLoading ? 'Updating...' : 'Update Transaction'}
                                 </Button>
                             </div>

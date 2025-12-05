@@ -1,29 +1,31 @@
-import { create } from 'zustand';
-import api from '@/lib/api';
-import { AxiosError } from 'axios';
+import { create } from "zustand";
+import api from "@/lib/api";
+import { AxiosError } from "axios";
 
-export interface Transaction {
-  id: string;
-  title: string;
-  amount: number;
-  type: 'INCOME' | 'EXPENSE';
-  category: string;
-  paymentMethod: string;
-  date: string;
-  notes?: string;
-  tags?: string[];
-}
-
-interface TransactionItem {
+export interface TransactionItem {
   name: string;
   quantity: number;
   price: number;
 }
 
+export interface Transaction {
+  id: string;
+  title: string;
+  amount: number;
+  type: "INCOME" | "EXPENSE";
+  category: string;
+  paymentMethod: string;
+  date: string;
+  notes?: string;
+  tags?: string[];
+  invoiceUrl?: string;
+  items?: TransactionItem[];
+}
+
 interface TransactionInput {
   title: string;
   amount: number;
-  type: 'INCOME' | 'EXPENSE';
+  type: "INCOME" | "EXPENSE";
   category: string;
   paymentMethod: string;
   date: string;
@@ -39,7 +41,10 @@ interface TransactionState {
   error: string | null;
   fetchTransactions: (filters?: Record<string, string>) => Promise<void>;
   addTransaction: (transaction: TransactionInput) => Promise<void>;
-  updateTransaction: (id: string, transaction: Partial<TransactionInput>) => Promise<void>;
+  updateTransaction: (
+    id: string,
+    transaction: Partial<TransactionInput>
+  ) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
 }
 
@@ -57,7 +62,7 @@ export const useTransactionStore = create<TransactionState>((set) => ({
     } catch (error: unknown) {
       const err = error as AxiosError<{ message: string }>;
       set({
-        error: err.response?.data?.message || 'Failed to fetch transactions',
+        error: err.response?.data?.message || "Failed to fetch transactions",
         isLoading: false,
       });
     }
@@ -66,7 +71,7 @@ export const useTransactionStore = create<TransactionState>((set) => ({
   addTransaction: async (transaction) => {
     set({ isLoading: true, error: null });
     try {
-      const { data } = await api.post('/transactions', transaction);
+      const { data } = await api.post("/transactions", transaction);
       set((state) => ({
         transactions: [data, ...state.transactions],
         isLoading: false,
@@ -74,7 +79,7 @@ export const useTransactionStore = create<TransactionState>((set) => ({
     } catch (error: unknown) {
       const err = error as AxiosError<{ message: string }>;
       set({
-        error: err.response?.data?.message || 'Failed to add transaction',
+        error: err.response?.data?.message || "Failed to add transaction",
         isLoading: false,
       });
     }
@@ -85,15 +90,13 @@ export const useTransactionStore = create<TransactionState>((set) => ({
     try {
       const { data } = await api.put(`/transactions/${id}`, transaction);
       set((state) => ({
-        transactions: state.transactions.map((t) =>
-          t.id === id ? data : t
-        ),
+        transactions: state.transactions.map((t) => (t.id === id ? data : t)),
         isLoading: false,
       }));
     } catch (error: unknown) {
       const err = error as AxiosError<{ message: string }>;
       set({
-        error: err.response?.data?.message || 'Failed to update transaction',
+        error: err.response?.data?.message || "Failed to update transaction",
         isLoading: false,
       });
     }
@@ -110,7 +113,7 @@ export const useTransactionStore = create<TransactionState>((set) => ({
     } catch (error: unknown) {
       const err = error as AxiosError<{ message: string }>;
       set({
-        error: err.response?.data?.message || 'Failed to delete transaction',
+        error: err.response?.data?.message || "Failed to delete transaction",
         isLoading: false,
       });
     }

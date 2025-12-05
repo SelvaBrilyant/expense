@@ -37,7 +37,7 @@ interface Transaction {
     date: string;
     notes?: string;
     invoiceUrl?: string;
-    items?: Array<{ id: string; name: string; quantity: number; price: number }>;
+    items?: Array<{ name: string; quantity: number; price: number }>;
 }
 
 interface TransactionsDataTableProps {
