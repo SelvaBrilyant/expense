@@ -64,8 +64,8 @@ export const sendOnboardingEmail = async (email: string, name: string) => {
 
             <p>Ready to get started? Complete your profile to unlock the full potential of ExpenseAI.</p>
             
-            <div style="text-align: center;">
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard" class="cta-button">Go to Dashboard</a>
+            <div style="text-align: center;color: #111827;">
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" class="cta-button">Go to Login</a>
             </div>
           </div>
           <div class="footer">
